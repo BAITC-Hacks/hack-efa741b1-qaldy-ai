@@ -9,6 +9,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "QALDY AI — Career Quest",
   description: "Объяснимый AI-навигатор развития сотрудника",
+  icons: {
+    icon: "/halyk-mark-official.png",
+    apple: "/halyk-mark-official.png",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

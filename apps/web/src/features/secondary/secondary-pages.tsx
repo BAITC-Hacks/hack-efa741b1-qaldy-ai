@@ -35,6 +35,10 @@ function Ring({ value, className = "" }: { value: number; className?: string }) 
       data-value={`${value}%`}
       style={{ "--value": value } as CSSProperties}
       aria-label={`${value} процентов`}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={value}
+      role="progressbar"
     />
   );
 }

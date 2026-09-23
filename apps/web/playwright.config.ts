@@ -27,9 +27,9 @@ export default defineConfig({
     timezoneId: "Asia/Qyzylorda",
     colorScheme: "light",
     reducedMotion: "reduce",
-    trace: "retain-on-failure",
+    trace: "off",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: "off",
   },
   projects: [
     {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
@@ -38,10 +39,15 @@ function Glyph({ name }: { name: string }) {
 
 function BrandMark() {
   return (
-    <svg aria-hidden="true" className="brand-symbol" viewBox="0 0 44 44">
-      <path d="M22 2 30 8l10 1-1 10 3 9-9 5-5 9-9-4-10 1-1-10-6-7 7-8 3-10 10 2Z" fill="#ffce00" />
-      <path d="M22 6 29 12l7 1-2 8 3 6-7 3-4 7-7-4-7 2-1-8-5-5 6-6 2-8 8 2Z" fill="#008a68" />
-    </svg>
+    <Image
+      alt=""
+      aria-hidden="true"
+      className="brand-symbol"
+      height={44}
+      priority
+      src="/halyk-mark-official.png"
+      width={44}
+    />
   );
 }
 
