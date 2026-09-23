@@ -29,6 +29,7 @@ function initials(fullName: string): string {
 export function EmployeeJourneyScreen() {
   const { t } = useI18n();
   const formatLabels = { online: t("online"), offline: t("offline"), self_paced: t("self_paced") };
+  const statusLabels = { completed: t("statusCompleted"), in_progress: t("statusInProgress"), dropped: t("statusDropped"), no_show: t("statusNoShow"), declined: t("statusDeclined"), overdue: t("statusOverdue") };
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
   const [identity, setIdentity] = useState<AuthIdentity | null>(null);
   const [authVersion, setAuthVersion] = useState(0);
@@ -208,6 +209,8 @@ export function EmployeeJourneyScreen() {
             <span className="section-kicker">{t("currentRole")}</span>
             <h2>{employee.role}</h2>
             <p>{employee.grade} · {employee.department}</p>
+            <p>{t("tenure")}: {employee.tenure_months == null ? "—" : `${employee.tenure_months} ${t("months")}`}</p>
+            {employee.hire_date && <p>{t("hiredOn")}: {employee.hire_date}</p>}
           </div>
         </div>
         <div className="trajectory-progress">
@@ -260,6 +263,23 @@ export function EmployeeJourneyScreen() {
         ) : <div className="compact-empty">{t("noCompleted")}</div>}
       </section>
 
+      <section className="section-block" data-testid="participation-history">
+        <div className="section-heading">
+          <h2>{t("participationHistory")}</h2>
+          <span className="count-label">{journey.activity_history.length}</span>
+        </div>
+        {journey.activity_history.length ? (
+          <div className="completed-activity-list">
+            {journey.activity_history.map((activity) => (
+              <article className="completed-activity-card" key={activity.record_id}>
+                <div><strong>{activity.title}</strong><span>{activity.event_id} · {activity.activity_date}</span></div>
+                <div className="activity-results"><strong>{statusLabels[activity.status]}</strong><span>{activity.completion_pct}%</span></div>
+              </article>
+            ))}
+          </div>
+        ) : <div className="compact-empty">{t("noHistory")}</div>}
+      </section>
+
       {journey.continuations.length > 0 && (
         <section className="section-block">
           <div className="section-heading">
@@ -289,7 +309,7 @@ export function EmployeeJourneyScreen() {
         </div>
         {journey.skill_gaps.length ? (
           <div className="gap-grid">
-            {journey.skill_gaps.slice(0, 6).map((gap) => (
+            {journey.skill_gaps.map((gap) => (
               <article className="gap-card" key={gap.skill_id}>
                 <div>
                   <h3>{gap.name}</h3>

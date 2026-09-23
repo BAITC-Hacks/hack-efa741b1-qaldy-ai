@@ -6,6 +6,8 @@ export type Locale = "ru" | "kk" | "en";
 
 const messages = {
   ru: {
+    tenure: "Стаж", months: "мес.", hiredOn: "Дата приёма", participationHistory: "История участия",
+    statusCompleted: "Завершено", statusInProgress: "В процессе", statusDropped: "Прервано", statusNoShow: "Пропуск", statusDeclined: "Отказ", statusOverdue: "Просрочено", noHistory: "Истории участия пока нет.",
     home: "Главная", hr: "HR-аналитика", import: "Импорт", language: "Язык",
     journey: "Личная траектория", demoUser: "Демо-пользователь", greeting: "Добрый день",
     calculated: "Следующие шаги рассчитаны по карьерной цели, навыкам и истории участия.",
@@ -21,6 +23,8 @@ const messages = {
     score: "результат", feedback: "оценка", noCompleted: "Завершённых активностей пока нет.",
   },
   kk: {
+    tenure: "Еңбек өтілі", months: "ай", hiredOn: "Жұмысқа қабылданған күні", participationHistory: "Қатысу тарихы",
+    statusCompleted: "Аяқталды", statusInProgress: "Орындалуда", statusDropped: "Тоқтатылды", statusNoShow: "Қатыспады", statusDeclined: "Бас тартты", statusOverdue: "Мерзімі өтті", noHistory: "Қатысу тарихы әлі жоқ.",
     home: "Басты бет", hr: "HR-талдау", import: "Импорт", language: "Тіл",
     journey: "Жеке траектория", demoUser: "Демо-пайдаланушы", greeting: "Қайырлы күн",
     calculated: "Келесі қадамдар мансаптық мақсат, дағдылар және қатысу тарихы бойынша есептелді.",
@@ -36,6 +40,8 @@ const messages = {
     score: "нәтиже", feedback: "баға", noCompleted: "Аяқталған белсенділік жоқ.",
   },
   en: {
+    tenure: "Tenure", months: "months", hiredOn: "Hire date", participationHistory: "Participation history",
+    statusCompleted: "Completed", statusInProgress: "In progress", statusDropped: "Dropped", statusNoShow: "No show", statusDeclined: "Declined", statusOverdue: "Overdue", noHistory: "No participation history yet.",
     home: "Home", hr: "HR analytics", import: "Import", language: "Language",
     journey: "Personal journey", demoUser: "Demo user", greeting: "Hello",
     calculated: "Next steps are calculated from the career goal, skills and participation history.",

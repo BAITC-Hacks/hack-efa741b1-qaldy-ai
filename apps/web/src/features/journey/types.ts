@@ -7,6 +7,8 @@ export type EmployeeListItem = {
 };
 
 export type Employee = EmployeeListItem & {
+  tenure_months: number | null;
+  hire_date: string | null;
   work_format: string;
   preferred_language: string;
 };

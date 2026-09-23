@@ -18,6 +18,8 @@ export const journeyFixture: EmployeeJourney = {
   as_of_date: "2026-09-23",
   employee: {
     ...employeeFixture,
+    tenure_months: 5,
+    hire_date: "2026-05-01",
     work_format: "hybrid",
     preferred_language: "ru",
   },
