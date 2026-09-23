@@ -1,29 +1,69 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const modules = [
-  ["Дефициты навыков", "Частые и критичные разрывы по ролям и грейдам."],
-  ["Участие", "Завершения, пропуски и отказы по активностям."],
-  ["Нет следующего шага", "Сотрудники и причины отсутствия рекомендации."],
-  ["Пробелы каталога", "Навыки, для которых нет доступной активности."],
-];
+  { id: "skill-gaps", ru: "Дефициты навыков", kk: "Дағды тапшылығы", en: "Skill gaps" },
+  { id: "participation", ru: "Участие", kk: "Қатысу", en: "Participation" },
+  { id: "uncovered-employees", ru: "Нет следующего шага", kk: "Келесі қадам жоқ", en: "Uncovered employees" },
+  { id: "catalog-gaps", ru: "Пробелы каталога", kk: "Каталог олқылықтары", en: "Catalog gaps" },
+] as const;
+
+type Row = Record<string, unknown>;
+function rowsOf(value: unknown): Row[] {
+  if (Array.isArray(value)) return value.filter((item): item is Row => Boolean(item) && typeof item === "object");
+  if (!value || typeof value !== "object") return [];
+  const object = value as Row;
+  for (const key of ["items", "results", "data", "rows"]) {
+    const rows = rowsOf(object[key]);
+    if (rows.length) return rows;
+  }
+  return [object];
+}
+function display(value: unknown) {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
 
 export default function HrPage() {
+  const { locale } = useI18n();
+  const [active, setActive] = useState<(typeof modules)[number]["id"]>("skill-gaps");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const labels = {
+    ru: { eyebrow: "HR workspace", title: "Командное развитие", text: "Актуальные метрики из HR API.", refresh: "Обновить", empty: "Данных пока нет", error: "Не удалось загрузить HR-метрики" },
+    kk: { eyebrow: "HR кеңістігі", title: "Команданы дамыту", text: "HR API-дан өзекті көрсеткіштер.", refresh: "Жаңарту", empty: "Дерек жоқ", error: "HR көрсеткіштері жүктелмеді" },
+    en: { eyebrow: "HR workspace", title: "Team development", text: "Current metrics from the HR API.", refresh: "Refresh", empty: "No data yet", error: "Could not load HR metrics" },
+  }[locale];
+
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      const response = await fetch(`${API_URL}/api/v1/hr/${active}`, { headers: { Accept: "application/json", "X-Demo-Role": "hr" } });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      setRows(rowsOf(await response.json()));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : labels.error); setRows([]);
+    } finally { setLoading(false); }
+  }, [active, labels.error]);
+  useEffect(() => { void load(); }, [load]);
+  const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row)))).slice(0, 7);
+
   return (
-    <main className="page-content">
-      <div className="eyebrow">HR workspace</div>
-      <div className="page-heading">
-        <div>
-          <h1>Командное развитие</h1>
-          <p>Каркас модулей HR. Данные и фильтры подключаются на следующем этапе.</p>
-        </div>
-        <span className="status-pill muted">Структура MVP</span>
+    <main className="page-content" data-testid="hr-dashboard">
+      <div className="eyebrow">{labels.eyebrow}</div>
+      <div className="page-heading"><div><h1>{labels.title}</h1><p>{labels.text}</p></div><button className="secondary-action" onClick={load} type="button">{labels.refresh}</button></div>
+      <div className="dashboard-tabs" role="tablist">
+        {modules.map((module) => <button aria-selected={active === module.id} key={module.id} onClick={() => setActive(module.id)} role="tab" type="button">{module[locale]}</button>)}
       </div>
-      <section className="module-grid" aria-label="HR modules">
-        {modules.map(([title, description]) => (
-          <article className="module-card" key={title}>
-            <span className="module-icon" aria-hidden="true" />
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </article>
-        ))}
+      <section className="data-panel" aria-busy={loading}>
+        {loading ? <div className="skeleton card-skeleton" /> : error ? <div className="inline-error">{labels.error}: {error}</div> : rows.length === 0 ? <div className="compact-empty">{labels.empty}</div> : (
+          <div className="table-scroll"><table><thead><tr>{columns.map((column) => <th key={column}>{column.replaceAll("_", " ")}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={String(row.id ?? row.employee_id ?? row.skill_id ?? index)}>{columns.map((column) => <td key={column}>{display(row[column])}</td>)}</tr>)}</tbody></table></div>
+        )}
       </section>
     </main>
   );

@@ -3,13 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "dev": "node node_modules/next/dist/bin/next dev",
+    "build": "node node_modules/next/dist/bin/next build",
+    "start": "node node_modules/next/dist/bin/next start",
+    "lint": "node node_modules/eslint/bin/eslint.js .",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "test": "node node_modules/vitest/vitest.mjs run",
+    "test:watch": "node node_modules/vitest/vitest.mjs",
+    "test:coverage": "node node_modules/vitest/vitest.mjs run --coverage",
+    "test:e2e": "npm run build && node node_modules/@playwright/test/cli.js test --project=e2e",
+    "test:visual": "node node_modules/@playwright/test/cli.js test --project=visual",
+    "test:a11y": "node node_modules/@playwright/test/cli.js test --project=a11y",
+    "test:ci": "npm run lint && npm run typecheck && npm run test:coverage && npm run build && playwright test"
   },
   "dependencies": {
     "next": "16.3.6",
@@ -17,9 +25,22 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "24.10.13",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "typescript": "6.0.3"
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.6",
+    "jsdom": "^29.1.1",
+    "msw": "^2.15.0",
+    "typescript": "6.0.3",
+    "vitest": "^5.0.1"
   }
 }

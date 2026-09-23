@@ -1,5 +1,5 @@
-import { EmployeeJourneyScreen } from "@/features/journey/employee-journey-screen";
+import { HomeScreen } from "@/features/prototype/core-pages";
 
 export default function HomePage() {
-  return <EmployeeJourneyScreen />;
+  return <HomeScreen />;
 }

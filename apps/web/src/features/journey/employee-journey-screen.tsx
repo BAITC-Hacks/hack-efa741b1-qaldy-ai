@@ -4,12 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { completeActivity, fetchEmployeeJourney, fetchEmployees } from "./api";
 import type { EmployeeJourney, EmployeeListItem, SkillChange } from "./types";
-
-const formatLabels = {
-  online: "Онлайн",
-  offline: "Офлайн",
-  self_paced: "В своём темпе",
-};
+import { useI18n } from "@/lib/i18n";
 
 const emptyReasonLabels: Record<string, string> = {
   no_target: "Сначала задайте карьерную цель.",
@@ -31,6 +26,8 @@ function initials(fullName: string): string {
 }
 
 export function EmployeeJourneyScreen() {
+  const { t } = useI18n();
+  const formatLabels = { online: t("online"), offline: t("offline"), self_paced: t("self_paced") };
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [journey, setJourney] = useState<EmployeeJourney | null>(null);
@@ -58,6 +55,7 @@ export function EmployeeJourneyScreen() {
   useEffect(() => {
     if (!selectedId) return;
     const controller = new AbortController();
+    setJourney(null);
     setLoading(true);
     setError(null);
     setChanges([]);
@@ -78,7 +76,7 @@ export function EmployeeJourneyScreen() {
   );
 
   async function handleComplete(eventId: string) {
-    if (!journey) return;
+    if (!journey || journey.employee.employee_id !== selectedId) return;
     setCompleting(eventId);
     setError(null);
     try {
@@ -100,10 +98,10 @@ export function EmployeeJourneyScreen() {
     return (
       <main className="page-content">
         <section className="error-panel">
-          <span>API недоступен</span>
-          <h1>Не удалось загрузить карьерную траекторию</h1>
+          <span>{t("apiUnavailable")}</span>
+          <h1>{t("loadingFailed")}</h1>
           <p>{error}</p>
-          <button onClick={() => window.location.reload()} type="button">Повторить</button>
+          <button onClick={() => window.location.reload()} type="button">{t("retry")}</button>
         </section>
       </main>
     );
@@ -128,9 +126,9 @@ export function EmployeeJourneyScreen() {
   return (
     <main className="page-content">
       <div className="workspace-row">
-        <div className="eyebrow">Личная траектория · dataset v{journey.dataset_version}</div>
+        <div className="eyebrow">{t("journey")} · dataset v{journey.dataset_version}</div>
         <label className="employee-picker">
-          <span>Демо-пользователь</span>
+          <span>{t("demoUser")}</span>
           <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
             {employees.map((item) => (
               <option key={item.employee_id} value={item.employee_id}>
@@ -143,10 +141,10 @@ export function EmployeeJourneyScreen() {
 
       <div className="page-heading">
         <div>
-          <h1>Добрый день, {employee.full_name.split(" ")[0]}</h1>
-          <p>Следующие шаги рассчитаны по карьерной цели, навыкам и истории участия на {journey.as_of_date}.</p>
+          <h1>{t("greeting")}, {employee.full_name.split(" ")[0]}</h1>
+          <p>{t("calculated")} {journey.as_of_date}.</p>
         </div>
-        <span className="status-pill">Реальные seed-данные</span>
+        <span className="status-pill">{t("realData")}</span>
       </div>
 
       {error && <div className="inline-error">{error}</div>}
@@ -158,7 +156,7 @@ export function EmployeeJourneyScreen() {
       )}
       {changes.length > 0 && (
         <section className="success-panel" aria-live="polite">
-          <strong>Прогресс обновлён</strong>
+          <strong>{t("progressUpdated")}</strong>
           <div>
             {changes.map((change) => (
               <span key={change.skill_id}>
@@ -173,14 +171,14 @@ export function EmployeeJourneyScreen() {
         <div className="employee-summary">
           <span className="employee-initials">{initials(employee.full_name)}</span>
           <div>
-            <span className="section-kicker">Текущая позиция</span>
+            <span className="section-kicker">{t("currentRole")}</span>
             <h2>{employee.role}</h2>
             <p>{employee.grade} · {employee.department}</p>
           </div>
         </div>
         <div className="trajectory-progress">
           <div className="progress-heading">
-            <span>Готовность к {journey.target_role} {journey.target_grade}</span>
+            <span>{t("readiness")}: {journey.target_role} {journey.target_grade}</span>
             <strong>{progress.percentage}%</strong>
           </div>
           <div className="progress-track" aria-label={`Готовность ${progress.percentage}%`}>
@@ -201,8 +199,8 @@ export function EmployeeJourneyScreen() {
         <section className="section-block">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">Уже начато</span>
-              <h2>Продолжить развитие</h2>
+              <span className="section-kicker">{t("started")}</span>
+              <h2>{t("continue")}</h2>
             </div>
           </div>
           <div className="continuation-grid">
@@ -219,10 +217,10 @@ export function EmployeeJourneyScreen() {
       <section className="section-block">
         <div className="section-heading">
           <div>
-            <span className="section-kicker">Фокус развития</span>
-            <h2>Разрывы до {journey.target_grade}</h2>
+            <span className="section-kicker">{t("focus")}</span>
+            <h2>{t("gaps")} {journey.target_grade}</h2>
           </div>
-          <span className="count-label">{journey.skill_gaps.length} навыков</span>
+          <span className="count-label">{journey.skill_gaps.length} {t("skills")}</span>
         </div>
         {journey.skill_gaps.length ? (
           <div className="gap-grid">
@@ -230,14 +228,14 @@ export function EmployeeJourneyScreen() {
               <article className="gap-card" key={gap.skill_id}>
                 <div>
                   <h3>{gap.name}</h3>
-                  {gap.critical && <span className="critical-label">Критичный</span>}
+                  {gap.critical && <span className="critical-label">{t("critical")}</span>}
                 </div>
                 <div className="level-row">
                   <strong>{gap.current_level}</strong>
                   <span className="level-line"><i style={{ width: `${(gap.current_level / gap.required_level) * 100}%` }} /></span>
                   <strong>{gap.required_level}</strong>
                 </div>
-                <p>Разрыв: {gap.gap} · текущий уровень → требование цели</p>
+                <p>{t("gap")}: {gap.gap}</p>
               </article>
             ))}
           </div>
@@ -248,9 +246,9 @@ export function EmployeeJourneyScreen() {
         <div className="section-heading">
           <div>
             <span className="section-kicker">
-              {journey.recommendation_mode === "ai" ? "AI-рекомендации" : "Детерминированные рекомендации"}
+              {journey.recommendation_mode === "ai" ? t("ai") : t("deterministic")}
             </span>
-            <h2>Следующие шаги</h2>
+            <h2>{t("nextSteps")}</h2>
           </div>
           <p className="explainability-note">Score раскрывается до отдельных факторов</p>
         </div>
@@ -269,10 +267,10 @@ export function EmployeeJourneyScreen() {
                   <div className="impact-line">
                     <span>{recommendation.skill}</span>
                     <strong>{recommendation.current_level} → {recommendation.projected_level}</strong>
-                    <small>цель {recommendation.required_level}</small>
+                    <small>{t("target")} {recommendation.required_level}</small>
                   </div>
                   <details>
-                    <summary>Почему этот шаг</summary>
+                    <summary>{t("why")}</summary>
                     <ul>{recommendation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                     <div className="factor-grid">
                       {recommendation.factors.map((factor) => (
@@ -282,14 +280,14 @@ export function EmployeeJourneyScreen() {
                   </details>
                 </div>
                 <div className="score-block">
-                  <span>Релевантность</span>
+                  <span>{t("relevance")}</span>
                   <strong>{recommendation.score}</strong>
                   <button
-                    disabled={completing !== null}
+                    disabled={completing !== null || journey.employee.employee_id !== selectedId}
                     onClick={() => handleComplete(recommendation.event_id)}
                     type="button"
                   >
-                    {completing === recommendation.event_id ? "Обновляем…" : "Завершить"}
+                    {completing === recommendation.event_id ? t("updating") : t("complete")}
                   </button>
                 </div>
               </article>

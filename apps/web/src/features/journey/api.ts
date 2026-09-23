@@ -2,6 +2,14 @@ import type { CompletionResult, EmployeeJourney, EmployeeListItem } from "./type
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+function demoHeaders(role: "employee" | "hr", employeeId?: string): HeadersInit {
+  return {
+    Accept: "application/json",
+    "X-Demo-Role": role,
+    ...(employeeId ? { "X-Employee-Id": employeeId } : {}),
+  };
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
@@ -13,7 +21,7 @@ async function readJson<T>(response: Response): Promise<T> {
 export async function fetchEmployees(signal?: AbortSignal): Promise<EmployeeListItem[]> {
   const response = await fetch(`${API_URL}/api/v1/employees?limit=200`, {
     signal,
-    headers: { Accept: "application/json" },
+    headers: demoHeaders("hr"),
   });
   return readJson<EmployeeListItem[]>(response);
 }
@@ -25,7 +33,7 @@ export async function fetchEmployeeJourney(
   const response = await fetch(`${API_URL}/api/v1/employees/${employeeId}/recommendations`, {
     method: "POST",
     signal,
-    headers: { Accept: "application/json" },
+    headers: demoHeaders("employee", employeeId),
   });
   return readJson<EmployeeJourney>(response);
 }
@@ -40,7 +48,7 @@ export async function completeActivity(
     {
       method: "POST",
       headers: {
-        Accept: "application/json",
+        ...demoHeaders("employee", employeeId),
         "Idempotency-Key": idempotencyKey,
       },
     },
