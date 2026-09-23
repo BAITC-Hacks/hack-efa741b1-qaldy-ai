@@ -1,4 +1,2 @@
-# Keep these runtime dependencies aligned with apps/api/pyproject.toml.
-fastapi==0.141.1
-openai>=2.0.0,<3.0.0
-uvicorn[standard]==0.53.0
+# Vercel uses the same tested runtime lock as the API container.
+-r apps/api/requirements.lock

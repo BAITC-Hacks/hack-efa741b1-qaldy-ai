@@ -4,10 +4,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.api import dependencies
 from app.application.import_service import ImportService, ValidationTokenError
 from app.application.journey_service import JourneyService
 from app.domain.errors import ActivityAlreadyCompleted
-from app.infrastructure.dataset_loader import load_dataset
+from app.infrastructure.dataset_loader import load_dataset, repository_dataset_dir
 from app.infrastructure.sqlite_repository import SQLiteRepository
 
 CSV_HEADER = (
@@ -424,3 +425,27 @@ def test_successful_import_advances_dataset_revision_once(import_context):
     assert after_first == before + 1
     assert replay.idempotent_replay is True
     assert repository.dataset_revision() == after_first
+
+
+def test_dependency_cache_reloads_bundle_after_import_revision(tmp_path, monkeypatch):
+    database_path = tmp_path / "revision-cache.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("DATASET_DIR", str(repository_dataset_dir()))
+    dependencies.clear_runtime_caches()
+    try:
+        before = dependencies.get_journey_service()
+        importer = dependencies.get_import_service()
+        document = employee_document(before.bundle, employee_id="E9777")
+        validation = importer.validate(document)
+        importer.apply(
+            validation.validation_token or "",
+            validation.package_hash or "",
+            "revision-cache-apply",
+        )
+
+        after = dependencies.get_journey_service()
+
+        assert after is not before
+        assert "E9777" in after.bundle.employees
+    finally:
+        dependencies.clear_runtime_caches()

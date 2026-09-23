@@ -133,3 +133,11 @@ def get_import_service() -> ImportService:
     configured = os.getenv("DATASET_DIR")
     dataset_dir = Path(configured) if configured else repository_dataset_dir()
     return _get_import_service_for_revision(revision, str(dataset_dir.resolve()))
+
+
+def clear_runtime_caches() -> None:
+    """Clear process-local dependency caches after configuration changes/tests."""
+    _get_import_service_for_revision.cache_clear()
+    _get_journey_service_for_revision.cache_clear()
+    _get_dataset_bundle_for_revision.cache_clear()
+    get_sqlite_repository.cache_clear()

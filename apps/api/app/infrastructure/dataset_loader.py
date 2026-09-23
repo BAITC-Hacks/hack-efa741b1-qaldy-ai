@@ -456,12 +456,18 @@ def load_dataset(dataset_dir: Path | None = None) -> DatasetBundle:
                 raise DatasetError(f"{context}.completion_pct: completed requires 100")
             if status in {"declined", "no_show"} and completion_pct != 0:
                 raise DatasetError(f"{context}.completion_pct: {status} requires 0")
-            if status in {"in_progress", "dropped"} and not 1 <= completion_pct <= 99:
+            if status == "in_progress" and not 0 <= completion_pct <= 95:
                 raise DatasetError(
-                    f"{context}.completion_pct: {status} requires a value in range 1..99"
+                    f"{context}.completion_pct: in_progress requires a value in range 0..95"
                 )
-            if status == "overdue" and completion_pct == 100:
-                raise DatasetError(f"{context}.completion_pct: overdue requires less than 100")
+            if status == "dropped" and not 5 <= completion_pct <= 95:
+                raise DatasetError(
+                    f"{context}.completion_pct: dropped requires a value in range 5..95"
+                )
+            if status == "overdue" and not 0 <= completion_pct <= 95:
+                raise DatasetError(
+                    f"{context}.completion_pct: overdue requires a value in range 0..95"
+                )
             score = _csv_float(row["score"], f"{context}.score") if row["score"] else None
             if score is not None and not 0 <= score <= 100:
                 raise DatasetError(
@@ -477,6 +483,25 @@ def load_dataset(dataset_dir: Path | None = None) -> DatasetBundle:
                     f"{context}.feedback_rating: expected a value in range 1..5, "
                     f"got {feedback_rating}"
                 )
+            assigned_by = _choice(
+                row["assigned_by"], ASSIGNED_BY, f"{context}.assigned_by"
+            )
+            due_date = (
+                _date(row["due_date"], f"{context}.due_date")
+                if row["due_date"]
+                else None
+            )
+            event = events[event_id]
+            if status == "no_show" and event.event_format == "self_paced":
+                raise DatasetError(f"{context}.status: no_show requires a scheduled event")
+            if status == "declined" and assigned_by == "self":
+                raise DatasetError(
+                    f"{context}.assigned_by: declined must be assigned by manager or hr"
+                )
+            if status == "overdue" and (not event.mandatory or due_date is None):
+                raise DatasetError(
+                    f"{context}.status: overdue requires a mandatory event and due_date"
+                )
             history.append(
                 ActivityRecord(
                     record_id=record_id,
@@ -485,14 +510,8 @@ def load_dataset(dataset_dir: Path | None = None) -> DatasetBundle:
                     activity_date=activity_date,
                     status=cast(Any, status),
                     completion_pct=completion_pct,
-                    assigned_by=_choice(
-                        row["assigned_by"], ASSIGNED_BY, f"{context}.assigned_by"
-                    ),
-                    due_date=(
-                        _date(row["due_date"], f"{context}.due_date")
-                        if row["due_date"]
-                        else None
-                    ),
+                    assigned_by=assigned_by,
+                    due_date=due_date,
                     score=score,
                     feedback_rating=feedback_rating,
                 )

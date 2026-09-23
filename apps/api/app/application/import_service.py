@@ -446,7 +446,11 @@ class ImportService:
                 )
             parsed.append(raw)
 
-        known_ids = set(self.bundle.employees) | seen
+        persisted_by_id = {
+            str(item.get("employee_id")): item
+            for item in self.repository.list_imported_employees()
+        }
+        known_ids = set(self.bundle.employees) | set(persisted_by_id) | seen
         imported_by_id = {
             item.get("employee_id"): item
             for item in parsed
@@ -475,12 +479,16 @@ class ImportService:
                 manager_grade = (
                     manager.grade
                     if manager is not None
-                    else imported_by_id.get(manager_id, {}).get("grade")
+                    else imported_by_id.get(
+                        manager_id, persisted_by_id.get(manager_id, {})
+                    ).get("grade")
                 )
                 manager_department = (
                     manager.department
                     if manager is not None
-                    else imported_by_id.get(manager_id, {}).get("department")
+                    else imported_by_id.get(
+                        manager_id, persisted_by_id.get(manager_id, {})
+                    ).get("department")
                 )
                 if manager_grade != "Lead":
                     self._error(
@@ -506,6 +514,15 @@ class ImportService:
                     f"$.employees[{index}].employee_id",
                     "conflict",
                     "employee_id exists with different content",
+                )
+            persisted = persisted_by_id.get(str(raw.get("employee_id", "")))
+            if persisted is not None and persisted != raw:
+                self._error(
+                    errors,
+                    "employees.json",
+                    f"$.employees[{index}].employee_id",
+                    "conflict",
+                    "employee_id exists in imported data with different content",
                 )
         return sorted(parsed, key=lambda item: str(item.get("employee_id", "")))
 
@@ -634,6 +651,33 @@ class ImportService:
                 assigned_by = canonical_row["assigned_by"].strip()
                 if assigned_by not in ASSIGNED_BY:
                     self._error(errors, "activity_history.csv", f"row {row_number}, assigned_by", "invalid_value", f"Unsupported assigned_by {assigned_by}")
+                event = self.bundle.events.get(event_id)
+                if status == "no_show" and event is not None and event.event_format == "self_paced":
+                    self._error(
+                        errors,
+                        "activity_history.csv",
+                        f"row {row_number}, status",
+                        "status_mismatch",
+                        "no_show is allowed only for scheduled events",
+                    )
+                if status == "declined" and assigned_by == "self":
+                    self._error(
+                        errors,
+                        "activity_history.csv",
+                        f"row {row_number}, assigned_by",
+                        "status_mismatch",
+                        "declined must be assigned by manager or hr",
+                    )
+                if status == "overdue" and event is not None and (
+                    not event.mandatory or not due_date
+                ):
+                    self._error(
+                        errors,
+                        "activity_history.csv",
+                        f"row {row_number}, status",
+                        "status_mismatch",
+                        "overdue requires a mandatory event and due_date",
+                    )
                 existing = seed_records.get(record_id)
                 record_conflict = existing is not None and not self._equivalent_record(
                     existing, canonical_row
@@ -645,7 +689,6 @@ class ImportService:
                     record_conflict = True
                 if record_conflict:
                     self._error(errors, "activity_history.csv", f"row {row_number}, record_id", "conflict", "record_id exists with different content")
-                event = self.bundle.events.get(event_id)
                 if (
                     record_id
                     and status == "completed"
@@ -731,10 +774,12 @@ class ImportService:
             reason = "completed requires 100"
         elif status in {"declined", "no_show"} and completion_pct != 0:
             reason = f"{status} requires 0"
-        elif status in {"in_progress", "dropped"} and not 1 <= completion_pct <= 99:
-            reason = f"{status} requires a value from 1 to 99"
-        elif status == "overdue" and completion_pct == 100:
-            reason = "overdue requires a value below 100"
+        elif status == "in_progress" and not 0 <= completion_pct <= 95:
+            reason = "in_progress requires a value from 0 to 95"
+        elif status == "dropped" and not 5 <= completion_pct <= 95:
+            reason = "dropped requires a value from 5 to 95"
+        elif status == "overdue" and not 0 <= completion_pct <= 95:
+            reason = "overdue requires a value from 0 to 95"
         if reason is not None:
             ImportService._error(
                 errors,

@@ -492,11 +492,12 @@ class SQLiteRepository:
                         applied_at.isoformat(),
                     ),
                 )
-                connection.execute(
-                    """UPDATE runtime_metadata
-                       SET value = CAST(value AS INTEGER) + 1
-                       WHERE key = 'dataset_revision'"""
-                )
+                if result_data["inserted_employees"] or result_data["inserted_history"]:
+                    connection.execute(
+                        """UPDATE runtime_metadata
+                           SET value = CAST(value AS INTEGER) + 1
+                           WHERE key = 'dataset_revision'"""
+                    )
                 connection.commit()
                 return StoredApplyResult(**result_data)
             except Exception:
