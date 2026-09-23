@@ -11,8 +11,10 @@ services:
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-10}
       DATASET_DIR: /data/seed/career_quest_dataset
+      DATABASE_URL: sqlite:////data/runtime/career_quest.db
     volumes:
       - ./data/seed/career_quest_dataset:/data/seed/career_quest_dataset:ro
+      - career_quest_runtime:/data/runtime
     ports:
       - "${API_PORT:-8000}:8000"
     healthcheck:
@@ -36,3 +38,18 @@ services:
         condition: service_healthy
     ports:
       - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --spider
+        - http://localhost:3000
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  career_quest_runtime:
