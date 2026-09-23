@@ -1,7 +1,10 @@
+from dataclasses import replace
+
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_journey_service
 from app.application.journey_service import JourneyService
+from app.domain.models import RoleProfile
 from app.infrastructure.dataset_loader import load_dataset
 from app.main import app
 
@@ -28,6 +31,26 @@ def test_real_journey_is_explainable_and_deterministic() -> None:
     ]
     assert all(len(item.reasons) >= 3 for item in first.recommendations)
     assert all(abs(sum(item.weight for item in rec.factors) - 1.0) < 0.0001 for rec in first.recommendations)
+
+
+def test_same_role_promotion_accepts_events_for_target_grade() -> None:
+    bundle = load_dataset()
+    employee = next(
+        item for item in bundle.employees.values() if item.grade == "Junior"
+    )
+    event = replace(
+        next(iter(bundle.events.values())),
+        target_roles=frozenset({employee.role}),
+        target_grades=frozenset({"Senior"}),
+    )
+    target = RoleProfile(
+        role=employee.role,
+        grade="Senior",
+        required_skills={},
+        critical_skills=frozenset(),
+    )
+
+    assert JourneyService._candidate_kind(employee, target, event) == "bridge"
 
 
 def test_completion_updates_progress_once() -> None:

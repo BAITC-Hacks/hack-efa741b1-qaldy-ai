@@ -103,6 +103,7 @@ def load_dataset(dataset_dir: Path | None = None) -> DatasetBundle:
             event_format=item["format"],
             duration_hours=float(item["duration_hours"]),
             mandatory=bool(item["mandatory"]),
+            repeatable=bool(item.get("repeatable", False)),
             target_roles=frozenset(item["target_roles"]),
             target_grades=frozenset(_grade(value) for value in item["target_grades"]),
             develops_skills=tuple(

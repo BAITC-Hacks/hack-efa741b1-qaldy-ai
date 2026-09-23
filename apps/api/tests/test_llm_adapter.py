@@ -53,6 +53,9 @@ def test_ai_reranks_only_valid_candidates_and_caches() -> None:
     second = adapter.rerank(journey)
 
     assert [item.event_id for item in first] == list(reversed(original_ids))
+    assert {item.event_id: item.reasons for item in first} == {
+        item.event_id: item.reasons for item in journey.recommendations
+    }
     assert second == first
     assert len(fake_responses.calls) == 1
     payload = json.loads(fake_responses.calls[0]["input"][1]["content"])

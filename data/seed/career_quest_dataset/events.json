@@ -1220,6 +1220,7 @@
       "format": "offline",
       "duration_hours": 2,
       "mandatory": false,
+      "repeatable": true,
       "target_roles": [
         "Backend Engineer",
         "Frontend Engineer",

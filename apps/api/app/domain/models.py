@@ -59,6 +59,7 @@ class DevelopmentEvent:
     event_format: str
     duration_hours: float
     mandatory: bool
+    repeatable: bool
     target_roles: frozenset[str]
     target_grades: frozenset[Grade]
     develops_skills: tuple[SkillGain, ...]

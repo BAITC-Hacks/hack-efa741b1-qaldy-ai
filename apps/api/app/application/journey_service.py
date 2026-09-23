@@ -23,6 +23,7 @@ from app.domain.models import (
     SkillChange,
     SkillGap,
 )
+from app.domain.errors import ActivityAlreadyCompleted
 
 GRADE_ORDER: tuple[Grade, ...] = ("Junior", "Middle", "Senior", "Lead")
 WEIGHTS = {
@@ -50,6 +51,23 @@ class RecommendationReranker(Protocol):
     def rerank(self, journey: EmployeeJourney) -> tuple[Recommendation, ...]: ...
 
 
+class CompletionRepository(Protocol):
+    def list_completion_records(self) -> tuple[ActivityRecord, ...]: ...
+
+    def find_completion(
+        self, employee_id: str, event_id: str, idempotency_key: str
+    ) -> ActivityRecord | None: ...
+
+    def record_completion(
+        self,
+        employee_id: str,
+        event_id: str,
+        activity_date: date,
+        idempotency_key: str,
+        repeatable: bool = False,
+    ) -> tuple[ActivityRecord, bool]: ...
+
+
 class JourneyError(RuntimeError):
     pass
 
@@ -71,9 +89,11 @@ class JourneyService:
         self,
         bundle: DatasetBundle,
         reranker: RecommendationReranker | None = None,
+        completion_repository: CompletionRepository | None = None,
     ):
         self.bundle = bundle
         self._reranker = reranker
+        self._completion_repository = completion_repository
         self._overlay: list[ActivityRecord] = []
         self._idempotency: dict[tuple[str, str, str], CompletionResult] = {}
         self._lock = threading.RLock()
@@ -196,9 +216,18 @@ class JourneyService:
 
         key = (employee_id, event_id, idempotency_key)
         with self._lock:
-            previous = self._idempotency.get(key)
-            if previous is not None:
-                return replace(previous, idempotent_replay=True)
+            if self._completion_repository is None:
+                previous = self._idempotency.get(key)
+                if previous is not None:
+                    return replace(previous, idempotent_replay=True)
+            else:
+                persisted = self._completion_repository.find_completion(
+                    employee_id, event_id, idempotency_key
+                )
+                if persisted is not None:
+                    return self._build_completion_result(
+                        employee, event, persisted, idempotent_replay=True
+                    )
 
             before_journey = self.get_journey(employee_id)
             if event_id not in {item.event_id for item in before_journey.recommendations}:
@@ -208,44 +237,68 @@ class JourneyService:
                 record.event_id == event_id and record.status == "completed"
                 for record in self._employee_records(employee_id)
             )
-            if existing_completed and event_id != "EV_036":
+            if existing_completed and not event.repeatable:
                 raise CompletionConflict("Activity has already been completed")
 
-            before_skills = self._effective_skills(
-                employee, self._employee_records(employee_id)
-            )
-            record = ActivityRecord(
-                record_id=f"OVL-{uuid.uuid4()}",
-                employee_id=employee_id,
-                event_id=event_id,
-                activity_date=self.bundle.as_of_date,
-                status="completed",
-                completion_pct=100,
-                assigned_by="self",
-                source="overlay",
-            )
-            self._overlay.append(record)
-            after_records = self._employee_records(employee_id)
-            after_skills = self._effective_skills(employee, after_records)
-            changes = tuple(
-                SkillChange(
-                    skill_id=gain.skill_id,
-                    name=self.bundle.skills[gain.skill_id].name,
-                    before=before_skills.get(gain.skill_id, 0),
-                    after=after_skills.get(gain.skill_id, 0),
-                    applied_gain=after_skills.get(gain.skill_id, 0)
-                    - before_skills.get(gain.skill_id, 0),
+            if self._completion_repository is None:
+                record = ActivityRecord(
+                    record_id=f"OVL-{uuid.uuid4()}",
+                    employee_id=employee_id,
+                    event_id=event_id,
+                    activity_date=self.bundle.as_of_date,
+                    status="completed",
+                    completion_pct=100,
+                    assigned_by="self",
+                    source="overlay",
                 )
-                for gain in event.develops_skills
+                self._overlay.append(record)
+                replay = False
+            else:
+                try:
+                    record, replay = self._completion_repository.record_completion(
+                        employee_id,
+                        event_id,
+                        self.bundle.as_of_date,
+                        idempotency_key,
+                        repeatable=event.repeatable,
+                    )
+                except ActivityAlreadyCompleted as error:
+                    raise CompletionConflict("Activity has already been completed") from error
+            result = self._build_completion_result(
+                employee, event, record, idempotent_replay=replay
             )
-            result = CompletionResult(
-                record_id=record.record_id,
-                idempotent_replay=False,
-                changes=changes,
-                journey=self.get_journey(employee_id),
-            )
-            self._idempotency[key] = result
+            if self._completion_repository is None:
+                self._idempotency[key] = result
             return result
+
+    def _build_completion_result(
+        self,
+        employee: Employee,
+        event: DevelopmentEvent,
+        record: ActivityRecord,
+        idempotent_replay: bool,
+    ) -> CompletionResult:
+        after_records = self._employee_records(employee.employee_id)
+        before_records = [item for item in after_records if item.record_id != record.record_id]
+        before_skills = self._effective_skills(employee, before_records)
+        after_skills = self._effective_skills(employee, after_records)
+        changes = tuple(
+            SkillChange(
+                skill_id=gain.skill_id,
+                name=self.bundle.skills[gain.skill_id].name,
+                before=before_skills.get(gain.skill_id, 0),
+                after=after_skills.get(gain.skill_id, 0),
+                applied_gain=after_skills.get(gain.skill_id, 0)
+                - before_skills.get(gain.skill_id, 0),
+            )
+            for gain in event.develops_skills
+        )
+        return CompletionResult(
+            record_id=record.record_id,
+            idempotent_replay=idempotent_replay,
+            changes=changes,
+            journey=self.get_journey(employee.employee_id),
+        )
 
     def _target_profile(self, employee: Employee) -> tuple[RoleProfile, str]:
         if employee.career_goal:
@@ -270,7 +323,12 @@ class JourneyService:
     def _employee_records(self, employee_id: str) -> list[ActivityRecord]:
         seen: set[str] = set()
         records: list[ActivityRecord] = []
-        for record in (*self.bundle.history, *self._overlay):
+        persisted = (
+            self._completion_repository.list_completion_records()
+            if self._completion_repository is not None
+            else ()
+        )
+        for record in (*self.bundle.history, *self._overlay, *persisted):
             if record.employee_id != employee_id or record.record_id in seen:
                 continue
             seen.add(record.record_id)
@@ -361,7 +419,7 @@ class JourneyService:
             if kind is None:
                 reasons["audience_mismatch"] += 1
                 continue
-            if event.event_id in completed and event.event_id != "EV_036":
+            if event.event_id in completed and not event.repeatable:
                 reasons["already_completed"] += 1
                 continue
             if latest.get(event.event_id) and latest[event.event_id].status == "in_progress":
@@ -429,11 +487,11 @@ class JourneyService:
     ) -> str | None:
         if employee.role in event.target_roles and employee.grade in event.target_grades:
             return "current_role"
-        if employee.role == target_profile.role:
-            return None
         target_index = GRADE_ORDER.index(target_profile.grade)
+        current_index = GRADE_ORDER.index(employee.grade)
         if target_profile.role in event.target_roles and any(
-            GRADE_ORDER.index(grade) <= target_index for grade in event.target_grades
+            current_index < GRADE_ORDER.index(grade) <= target_index
+            for grade in event.target_grades
         ):
             return "bridge"
         return None

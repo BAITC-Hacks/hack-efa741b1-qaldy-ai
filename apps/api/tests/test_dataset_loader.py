@@ -11,3 +11,9 @@ def test_seed_dataset_contract() -> None:
     assert len(bundle.employees) == 200
     assert len(bundle.events) == 40
     assert len(bundle.history) == 2743
+    assert bundle.events["EV_036"].repeatable is True
+    assert all(
+        event.repeatable is False
+        for event_id, event in bundle.events.items()
+        if event_id != "EV_036"
+    )

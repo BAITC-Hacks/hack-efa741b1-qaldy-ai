@@ -18,8 +18,10 @@ app/
 - `GET /api/v1/employees/{employee_id}/journey`;
 - `POST /api/v1/employees/{employee_id}/recommendations`;
 - `POST /api/v1/employees/{employee_id}/activities/{event_id}/complete` с заголовком `Idempotency-Key`.
+- HR analytics: `/api/v1/hr/skill-gaps`, `/participation`, `/uncovered-employees`, `/catalog-gaps`.
+- HR import: `POST /api/v1/import/validate` и `POST /api/v1/import/apply`.
 
-По умолчанию API читает `data/seed/career_quest_dataset` из корня репозитория. Другой путь можно передать через `DATASET_DIR`. Завершения хранятся в in-memory overlay, поэтому после перезапуска процесса исходный seed снова становится единственным источником состояния.
+По умолчанию API читает `data/seed/career_quest_dataset` из корня репозитория. Другой путь можно передать через `DATASET_DIR`. Завершения и импортированные профили/история сохраняются в SQLite. Путь задаётся через `DATABASE_URL` (Compose по умолчанию использует `/data/runtime/career_quest.db`). Employee endpoints используют демонстрационные заголовки; список сотрудников, HR routes и импорт доступны только с `X-Demo-Role: hr`. Подробности — в [`../../docs/API.md`](../../docs/API.md).
 
 Локальный запуск:
 

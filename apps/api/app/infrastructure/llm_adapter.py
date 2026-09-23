@@ -3,7 +3,6 @@ import json
 import logging
 import threading
 import time
-from dataclasses import replace
 from typing import Any
 
 from pydantic import BaseModel
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 class AIRecommendationItem(BaseModel):
     event_id: str
-    reasons: list[str]
 
 
 class AIRecommendationPlan(BaseModel):
@@ -65,11 +63,8 @@ class OpenAIRecommendationAdapter:
                     "role": "system",
                     "content": (
                         "Ты карьерный AI-навигатор. Работай только с переданными "
-                        "валидными кандидатами. Верни каждый event_id ровно один раз, "
-                        "можешь изменить только порядок. Для каждого события дай 3–4 "
-                        "краткие причины на русском, опираясь только на evidence: цель, "
-                        "конкретный разрыв, критичность, историю и ожидаемый эффект. "
-                        "Не обещай полного закрытия разрыва, если gain недостаточен."
+                        "валидными кандидатами. Верни каждый event_id ровно один раз "
+                        "и измени только порядок. Не добавляй объяснения или другие поля."
                     ),
                 },
                 {
@@ -91,10 +86,7 @@ class OpenAIRecommendationAdapter:
 
         reranked: list[Recommendation] = []
         for item in plan.recommendations:
-            reasons = tuple(reason.strip() for reason in item.reasons if reason.strip())
-            if not 3 <= len(reasons) <= 4:
-                raise ValueError("Each recommendation must contain 3-4 reasons")
-            reranked.append(replace(source[item.event_id], reasons=reasons))
+            reranked.append(source[item.event_id])
 
         result = tuple(reranked)
         with self._lock:
@@ -109,13 +101,8 @@ class OpenAIRecommendationAdapter:
         return result
 
     def _evidence(self, journey: EmployeeJourney) -> dict[str, Any]:
-        gaps = {item.skill_id: item for item in journey.skill_gaps}
         candidates = []
         for item in journey.recommendations:
-            matching_gap = next(
-                (gap for gap in gaps.values() if gap.name == item.skill),
-                None,
-            )
             candidates.append(
                 {
                     "event_id": item.event_id,
@@ -128,7 +115,6 @@ class OpenAIRecommendationAdapter:
                     "current_level": item.current_level,
                     "projected_level": item.projected_level,
                     "required_level": item.required_level,
-                    "critical": matching_gap.critical if matching_gap else False,
                     "factors": {
                         factor.code: factor.value for factor in item.factors
                     },
