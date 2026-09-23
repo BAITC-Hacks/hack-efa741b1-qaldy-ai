@@ -17,7 +17,8 @@ function rowsOf(value: unknown): Row[] {
   if (Array.isArray(value)) return value.filter((item): item is Row => Boolean(item) && typeof item === "object");
   if (!value || typeof value !== "object") return [];
   const object = value as Row;
-  for (const key of ["items", "results", "data", "rows"]) {
+  // Participation keeps its event rows in by_event and leaves items empty.
+  for (const key of ["by_event", "items", "results", "data", "rows"]) {
     if (Array.isArray(object[key])) return rowsOf(object[key]);
     const rows = rowsOf(object[key]);
     if (rows.length) return rows;
@@ -72,7 +73,7 @@ export default function HrPage() {
       </div>
       <section className="data-panel" aria-busy={loading}>
         {loading ? <div className="skeleton card-skeleton" /> : error ? <div className="inline-error">{labels.error}: {error}</div> : rows.length === 0 ? <div className="compact-empty">{labels.empty}</div> : (
-          <div className="table-scroll"><table><thead><tr>{columns.map((column) => <th key={column}>{column.replaceAll("_", " ")}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={String(row.id ?? row.employee_id ?? row.skill_id ?? index)}>{columns.map((column) => <td key={column}>{display(row[column])}</td>)}</tr>)}</tbody></table></div>
+          <div className="table-scroll"><table><thead><tr>{columns.map((column) => <th key={column}>{column.replaceAll("_", " ")}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={String(row.id ?? row.employee_id ?? row.skill_id ?? row.key ?? index)}>{columns.map((column) => <td key={column}>{display(row[column])}</td>)}</tr>)}</tbody></table></div>
         )}
       </section>
     </main>
