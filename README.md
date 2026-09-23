@@ -16,6 +16,15 @@
 
 Требуются Docker Desktop (или Docker Engine) и Docker Compose v2.
 
+На Windows можно запустить web и API без Docker:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\start-local.ps1
+```
+
+Скрипт запускает оба сервиса в фоне, создаёт demo HR-токен при необходимости и открывает приложение по адресу `http://localhost:3000`. Токен выводится в консоль. Логи находятся в `%TEMP%\qaldy-career-quest-local`.
+
 ```powershell
 .\scripts\setup-demo-auth.ps1
 docker compose up --build
