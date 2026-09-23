@@ -45,9 +45,7 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Затем стартовый kit размещается в `data/seed/career_quest_dataset/` согласно [инструкции настройки](docs/SETUP.md).
-
-> Текущий первый этап фиксирует план, структуру и контракт запуска. Исполняемые API, frontend и `docker-compose.yml` добавляются следующим атомарным коммитом; до него команда запуска приложения ещё недоступна.
+После запуска откройте `http://localhost:3000`. Первый vertical slice использует явно маркированный demo-профиль; подключение полного стартового kit выполняется следующим этапом. Правила размещения датасета описаны в [инструкции настройки](docs/SETUP.md).
 
 ## Планируемые адреса
 
@@ -65,6 +63,26 @@ Copy-Item .env.example .env
 - [Контракт frontend-модуля](apps/web/README.md)
 - [Размещение seed-данных](data/seed/README.md)
 
+## Проверки без Docker
+
+Backend:
+
+```bash
+cd apps/api
+python -m venv .venv
+pip install -e ".[dev]"
+pytest
+```
+
+Frontend:
+
+```bash
+cd apps/web
+npm ci
+npm run typecheck
+npm run build
+```
+
 ## Статус
 
-Первый этап: планирование и базовая структура проекта.
+Работает первый пользовательский сценарий: API отдаёт demo-профиль с траекторией, дефицитами и тремя объяснимыми рекомендациями, а web отображает его с loading/error состояниями. HR и import представлены базовыми экранами для следующих этапов.

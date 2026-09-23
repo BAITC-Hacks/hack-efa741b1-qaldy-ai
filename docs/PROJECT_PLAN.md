@@ -24,6 +24,8 @@
 
 ## Этап 2. Запускаемый bootstrap
 
+Статус: завершён в MVP-каркасе с demo vertical slice.
+
 Задачи:
 
 - создать FastAPI healthcheck;

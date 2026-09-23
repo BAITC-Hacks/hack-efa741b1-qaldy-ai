@@ -1,16 +1,30 @@
 # Web application
 
-Здесь будет Next.js-приложение с интерфейсами сотрудника и HR.
+Next.js-приложение с интерфейсами сотрудника и HR.
 
-Планируемые зоны:
+Структура:
 
 ```text
 src/
-├── app/
-├── components/
-├── features/
-├── i18n/
-└── lib/
+├── app/          страницы employee, HR и import
+├── components/   общая навигация
+├── features/     employee journey и API client
+├── i18n/         будущая локализация
+└── lib/          общие утилиты
 ```
 
-Первый vertical slice: стартовая страница, проверка связи с API и базовые состояния loading/error.
+Текущий vertical slice загружает demo journey из FastAPI и показывает профиль, траекторию, дефициты и три объяснимых шага.
+
+Локальный запуск:
+
+```bash
+npm ci
+npm run dev
+```
+
+Проверки:
+
+```bash
+npm run typecheck
+npm run build
+```

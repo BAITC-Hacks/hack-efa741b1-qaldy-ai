@@ -6,6 +6,7 @@
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -15,6 +16,7 @@ venv/
 # Node.js
 node_modules/
 .next/
+*.tsbuildinfo
 coverage/
 playwright-report/
 test-results/
