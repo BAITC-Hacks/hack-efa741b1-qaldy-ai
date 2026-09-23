@@ -53,7 +53,7 @@ data/seed/career_quest_dataset/
 docker compose up --build
 ```
 
-Seed загружается автоматически при старте API.
+Seed загружается при первом создании API service.
 
 Проверка:
 
@@ -102,4 +102,10 @@ npm run dev
 3. Проверьте целевой профиль, разрывы и 1–3 рекомендации.
 4. Нажмите «Завершить активность» и проверьте блок `before → after` и обновлённый прогресс.
 
-Рекомендации рассчитываются детерминированно без LLM. Завершения пока хранятся только в памяти API и сбрасываются при перезапуске.
+Рекомендации рассчитываются детерминированно без LLM. Завершения и импорты сохраняются в SQLite и восстанавливаются после перезапуска API. HR может загрузить JSON с `employees_json` и необязательным `activity_history_csv`, выполнить dry-run проверку, затем применить результат. В Compose `DATABASE_URL` по умолчанию указывает на `/data/runtime/career_quest.db` в постоянном Docker volume.
+
+## Переменные окружения
+
+`API_PORT` и `WEB_PORT` меняют публикуемые порты Compose. `NEXT_PUBLIC_API_URL` задаёт адрес API, встраиваемый при сборке web image, поэтому после его изменения пересоберите web. `DATASET_DIR` задаёт путь к seed; при запуске в Compose каталог также должен быть смонтирован. `DATABASE_URL` задаёт SQLite-файл с завершениями и импортами. `CORS_ORIGINS` — дополнительные origins API через запятую. `LLM_ENABLED`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` и `LLM_TIMEOUT_SECONDS` включают необязательный reranker.
+
+На Windows PowerShell для локального запуска API активируйте окружение как `.\.venv\Scripts\Activate.ps1`.

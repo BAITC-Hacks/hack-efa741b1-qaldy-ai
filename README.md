@@ -23,7 +23,40 @@ docker compose up --build
 
 Откройте web-приложение на [http://localhost:3000](http://localhost:3000), API на [http://localhost:8000](http://localhost:8000), интерактивную схему API — [http://localhost:8000/docs](http://localhost:8000/docs). Без настройки LLM рекомендации работают детерминированно.
 
-Чтобы остановить сервисы, выполните `docker compose down`. Именованный Docker volume `career_quest_runtime` хранит runtime-БД, однако текущий пользовательский сценарий завершений хранит изменения только в памяти процесса; после перезапуска они теряются.
+Чтобы остановить сервисы, выполните `docker compose down`. Именованный Docker volume `career_quest_runtime` хранит runtime-БД с завершениями активностей и импортированными профилями/историей.
+
+## Проверки и CI
+
+GitHub Actions запускает проверки при каждом `push` и `pull_request`:
+
+- API: установка Python-зависимостей разработки и `pytest`.
+- Web: `npm ci`, ESLint, проверка TypeScript, unit-тесты Vitest и Playwright E2E на production-сборке Next.js.
+
+Для запуска проверок локально используйте Python 3.12+ и Node.js 22.x.
+
+Backend (из корня репозитория):
+
+```powershell
+cd apps/api
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+Frontend (из корня репозитория):
+
+```powershell
+cd apps/web
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+```
+
+Для запуска web-приложения и API вместе используйте Docker Compose по инструкции выше. CI не требует LLM API-ключа: рекомендации должны работать в детерминированном режиме.
 
 ## Структура
 
@@ -49,9 +82,9 @@ docs/           настройка, архитектура, API и формат 
 
 - Основной путь сотрудника и HR-аналитика реализован на seed-данных.
 - Доступ HR к обзорным API защищён demo-заголовком. Это демонстрационная авторизация, не production identity provider.
-- Страница импорта присутствует, но API validate/apply пока не реализован.
-- Новые завершения активности не переживают перезапуск API. SQLite repository существует, но пока не подключён к `JourneyService`.
+- HR может загрузить `employees.json` и необязательный `activity_history.csv`, проверить их через dry-run и применить. Импортированные записи доступны в профилях, рекомендациях и HR-агрегатах; они сохраняются в SQLite.
+- Завершения активности и результаты импорта хранятся в SQLite по `DATABASE_URL` и переживают перезапуск API.
 - Веб-страницы дополнительных разделов продукта могут использовать локальные демонстрационные данные; наличие страницы не означает наличие live API.
 
-Перед использованием для реальных сотрудников замените demo-авторизацию, подключите persistence и согласуйте обработку персональных данных.
+Перед использованием для реальных сотрудников замените demo-авторизацию, перенесите SQLite на production-grade хранилище с резервным копированием и согласуйте обработку персональных данных.
 
