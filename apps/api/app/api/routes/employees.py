@@ -1,4 +1,3 @@
-from dataclasses import replace
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -26,7 +25,7 @@ def list_employees(
     service: Service,
     _principal: HRPrincipal,
     query: str | None = Query(default=None, max_length=100),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
 ) -> list[EmployeeListItemResponse]:
     return [EmployeeListItemResponse.model_validate(item) for item in service.list_employees(query, limit)]
 
@@ -66,14 +65,12 @@ def complete_activity(
     event_id: str,
     service: Service,
     _principal: EmployeeResourcePrincipal,
-    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    idempotency_key: Annotated[
+        str, Header(alias="Idempotency-Key", min_length=1, max_length=128)
+    ],
 ) -> CompletionResponse:
     try:
         result = service.complete_activity(employee_id, event_id, idempotency_key)
-        result = replace(
-            result,
-            journey=service.get_recommendations(employee_id),
-        )
         return CompletionResponse.model_validate(result)
     except EmployeeNotFound as error:
         raise HTTPException(status_code=404, detail="Employee not found") from error

@@ -1,12 +1,14 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ImportValidateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     employees_json: dict[str, Any]
-    activity_history_csv: str | None = None
+    activity_history_csv: str | None = Field(default=None, max_length=10_000_000)
 
 
 class ImportIssueResponse(BaseModel):
@@ -28,8 +30,10 @@ class ImportValidationResponse(BaseModel):
 
 
 class ImportApplyRequest(BaseModel):
-    validation_token: str = Field(min_length=1)
-    package_hash: str = Field(min_length=64, max_length=64)
+    model_config = ConfigDict(extra="forbid")
+
+    validation_token: str = Field(min_length=1, max_length=128)
+    package_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class ImportApplyResponse(BaseModel):

@@ -5,12 +5,16 @@ import uuid
 from collections import Counter
 from dataclasses import replace
 from datetime import date
-from typing import Protocol
+from typing import Any, Protocol
+
+from pydantic import TypeAdapter
 
 from app.domain.models import (
     ActivityRecord,
+    ActivitySummary,
     CompletionResult,
     Continuation,
+    CurrentSkill,
     DatasetBundle,
     DevelopmentEvent,
     Employee,
@@ -45,6 +49,7 @@ REASON_PRIORITY = (
     "audience_mismatch",
 )
 logger = logging.getLogger(__name__)
+COMPLETION_RESULT_ADAPTER = TypeAdapter(CompletionResult)
 
 
 class RecommendationReranker(Protocol):
@@ -66,6 +71,18 @@ class CompletionRepository(Protocol):
         idempotency_key: str,
         repeatable: bool = False,
     ) -> tuple[ActivityRecord, bool]: ...
+
+    def find_completion_snapshot(
+        self, employee_id: str, event_id: str, idempotency_key: str
+    ) -> dict[str, Any] | None: ...
+
+    def save_completion_snapshot(
+        self,
+        employee_id: str,
+        event_id: str,
+        idempotency_key: str,
+        snapshot: dict[str, Any],
+    ) -> None: ...
 
 
 class JourneyError(RuntimeError):
@@ -158,9 +175,35 @@ class JourneyService:
             target_grade=target_profile.grade,
             target_reason=target_reason,
             progress=progress,
+            current_skills=tuple(
+                CurrentSkill(
+                    skill_id=skill_id,
+                    name=self.bundle.skills[skill_id].name,
+                    level=level,
+                )
+                for skill_id, level in sorted(effective.items())
+                if skill_id in self.bundle.skills
+            ),
             skill_gaps=tuple(gaps),
             recommendations=tuple(recommendations),
             continuations=continuations,
+            activity_history=tuple(
+                ActivitySummary(
+                    record_id=record.record_id,
+                    event_id=record.event_id,
+                    title=self.bundle.events[record.event_id].title,
+                    activity_date=record.activity_date,
+                    due_date=record.due_date,
+                    status=record.status,
+                    completion_pct=record.completion_pct,
+                    score=record.score,
+                    feedback_rating=record.feedback_rating,
+                    assigned_by=record.assigned_by,
+                    source=record.source,
+                )
+                for record in reversed(records)
+                if record.event_id in self.bundle.events
+            ),
             primary_reason=primary_reason,
             reason_counts=dict(reason_counts),
         )
@@ -180,8 +223,7 @@ class JourneyService:
             recommendations = self._reranker.rerank(journey)
         except Exception as error:  # LLM is never a single point of failure.
             logger.warning(
-                "recommendation_fallback employee_id=%s error_type=%s",
-                employee_id,
+                "recommendation_fallback error_type=%s",
                 type(error).__name__,
             )
             return replace(
@@ -195,7 +237,8 @@ class JourneyService:
             recommendations=recommendations,
             recommendation_mode="ai",
             recommendation_notice=(
-                "AI уточнил порядок и объяснения только среди валидных кандидатов."
+                "AI уточнил порядок среди валидных кандидатов и выбрал факторы "
+                "объяснения; формулировки составлены из проверенных данных."
             ),
         )
 
@@ -225,9 +268,17 @@ class JourneyService:
                     employee_id, event_id, idempotency_key
                 )
                 if persisted is not None:
-                    return self._build_completion_result(
+                    snapshot = self._completion_repository.find_completion_snapshot(
+                        employee_id, event_id, idempotency_key
+                    )
+                    if snapshot is not None:
+                        previous = COMPLETION_RESULT_ADAPTER.validate_python(snapshot)
+                        return replace(previous, idempotent_replay=True)
+                    result = self._build_completion_result(
                         employee, event, persisted, idempotent_replay=True
                     )
+                    self._save_completion_snapshot(key, result)
+                    return result
 
             before_journey = self.get_journey(employee_id)
             if event_id not in {item.event_id for item in before_journey.recommendations}:
@@ -269,7 +320,26 @@ class JourneyService:
             )
             if self._completion_repository is None:
                 self._idempotency[key] = result
+            else:
+                if replay:
+                    snapshot = self._completion_repository.find_completion_snapshot(
+                        employee_id, event_id, idempotency_key
+                    )
+                    if snapshot is not None:
+                        previous = COMPLETION_RESULT_ADAPTER.validate_python(snapshot)
+                        return replace(previous, idempotent_replay=True)
+                self._save_completion_snapshot(key, result)
             return result
+
+    def _save_completion_snapshot(
+        self,
+        key: tuple[str, str, str],
+        result: CompletionResult,
+    ) -> None:
+        if self._completion_repository is None:
+            return
+        snapshot = COMPLETION_RESULT_ADAPTER.dump_python(result, mode="json")
+        self._completion_repository.save_completion_snapshot(*key, snapshot)
 
     def _build_completion_result(
         self,

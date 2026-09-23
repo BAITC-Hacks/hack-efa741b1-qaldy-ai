@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { AUTH_CHANGE_EVENT, fetchAuthIdentity, getAuthHeaders } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const modules = [
@@ -34,6 +35,7 @@ export default function HrPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [authVersion, setAuthVersion] = useState(0);
   const labels = {
     ru: { eyebrow: "HR workspace", title: "Командное развитие", text: "Актуальные метрики из HR API.", refresh: "Обновить", empty: "Данных пока нет", error: "Не удалось загрузить HR-метрики" },
     kk: { eyebrow: "HR кеңістігі", title: "Команданы дамыту", text: "HR API-дан өзекті көрсеткіштер.", refresh: "Жаңарту", empty: "Дерек жоқ", error: "HR көрсеткіштері жүктелмеді" },
@@ -43,14 +45,21 @@ export default function HrPage() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const response = await fetch(`${API_URL}/api/v1/hr/${active}`, { headers: { Accept: "application/json", "X-Demo-Role": "hr" } });
+      const identity = await fetchAuthIdentity();
+      if (identity.role !== "hr") throw new Error("Для HR-аналитики требуется HR-токен");
+      const response = await fetch(`${API_URL}/api/v1/hr/${active}`, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       setRows(rowsOf(await response.json()));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.error); setRows([]);
     } finally { setLoading(false); }
   }, [active, labels.error]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const onAuthChange = () => setAuthVersion((version) => version + 1);
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+  }, []);
+  useEffect(() => { void load(); }, [load, authVersion]);
   const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row)))).slice(0, 7);
 
   return (

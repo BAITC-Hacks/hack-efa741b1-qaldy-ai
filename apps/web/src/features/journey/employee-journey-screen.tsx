@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { completeActivity, fetchEmployeeJourney, fetchEmployees } from "./api";
 import type { EmployeeJourney, EmployeeListItem, SkillChange } from "./types";
 import { useI18n } from "@/lib/i18n";
+import { AUTH_CHANGE_EVENT, fetchAuthIdentity, type AuthIdentity } from "@/lib/auth";
 
 const emptyReasonLabels: Record<string, string> = {
   no_target: "Сначала задайте карьерную цель.",
@@ -29,6 +30,8 @@ export function EmployeeJourneyScreen() {
   const { t } = useI18n();
   const formatLabels = { online: t("online"), offline: t("offline"), self_paced: t("self_paced") };
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
+  const [identity, setIdentity] = useState<AuthIdentity | null>(null);
+  const [authVersion, setAuthVersion] = useState(0);
   const [selectedId, setSelectedId] = useState("");
   const [journey, setJourney] = useState<EmployeeJourney | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +40,30 @@ export function EmployeeJourneyScreen() {
   const [changes, setChanges] = useState<SkillChange[]>([]);
 
   useEffect(() => {
+    const onAuthChange = () => setAuthVersion((version) => version + 1);
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
-    fetchEmployees(controller.signal)
-      .then((items) => {
+    setIdentity(null);
+    setSelectedId("");
+    setEmployees([]);
+    setJourney(null);
+    setLoading(true);
+    setError(null);
+    fetchAuthIdentity(controller.signal)
+      .then(async (auth) => {
+        if (controller.signal.aborted) return;
+        setIdentity(auth);
+        if (auth.role === "employee") {
+          if (!auth.employee_id) throw new Error("Токен не привязан к сотруднику");
+          setSelectedId(auth.employee_id);
+          return;
+        }
+        const items = await fetchEmployees(controller.signal);
+        if (controller.signal.aborted) return;
         setEmployees(items);
         setSelectedId(items[0]?.employee_id ?? "");
       })
@@ -50,10 +74,10 @@ export function EmployeeJourneyScreen() {
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [authVersion]);
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || !identity) return;
     const controller = new AbortController();
     setJourney(null);
     setLoading(true);
@@ -68,7 +92,7 @@ export function EmployeeJourneyScreen() {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [selectedId]);
+  }, [identity, selectedId]);
 
   const selectedEmployee = useMemo(
     () => employees.find((item) => item.employee_id === selectedId),
@@ -127,7 +151,7 @@ export function EmployeeJourneyScreen() {
     <main className="page-content">
       <div className="workspace-row">
         <div className="eyebrow">{t("journey")} · dataset v{journey.dataset_version}</div>
-        <label className="employee-picker">
+        {identity?.role === "hr" && <label className="employee-picker">
           <span>{t("demoUser")}</span>
           <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
             {employees.map((item) => (
@@ -136,7 +160,7 @@ export function EmployeeJourneyScreen() {
               </option>
             ))}
           </select>
-        </label>
+        </label>}
       </div>
 
       <div className="page-heading">
@@ -300,7 +324,7 @@ export function EmployeeJourneyScreen() {
         )}
       </section>
 
-      <span className="sr-only">Выбран: {selectedEmployee?.full_name}</span>
+      <span className="sr-only">Выбран: {selectedEmployee?.full_name ?? journey.employee.full_name}</span>
     </main>
   );
 }

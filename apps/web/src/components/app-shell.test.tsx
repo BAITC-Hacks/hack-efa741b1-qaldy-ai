@@ -35,6 +35,7 @@ function renderShell() {
 describe("AppShell navigation", () => {
   beforeEach(() => {
     navigationState.pathname = "/career-map";
+    window.sessionStorage.clear();
   });
 
   it("exposes all product destinations and marks only the current one", () => {
@@ -57,7 +58,7 @@ describe("AppShell navigation", () => {
     const user = userEvent.setup();
     renderShell();
 
-    await user.click(screen.getByRole("button", { name: /Анна Смирнова/ }));
+    await user.click(screen.getByRole("button", { name: /Демо-профиль/ }));
 
     expect(screen.getByRole("menuitem", { name: "Профиль и достижения" })).toHaveAttribute(
       "href",

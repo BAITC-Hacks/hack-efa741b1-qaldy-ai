@@ -60,7 +60,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "node .next/standalone/server.js",
+    command: "node node_modules/next/dist/bin/next start -p 3100 -H 127.0.0.1",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

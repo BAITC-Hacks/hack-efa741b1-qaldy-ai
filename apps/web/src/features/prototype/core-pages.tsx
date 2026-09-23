@@ -10,6 +10,10 @@ const quests = [
   { title: "Запросить обратную связь", type: "Индивидуальный", skill: "Коммуникация", progress: 0, xp: 100, status: "Доступный", due: "20 окт. 2026" },
 ];
 
+function DemoNotice() {
+  return <p className="demo-notice" role="note"><strong>Демо-экран.</strong> Профиль, показатели, активности и ответы AI здесь приведены для примера. Актуальную траекторию смотрите в разделе «Личная траектория».</p>;
+}
+
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={`cq-panel ${className}`}>{children}</section>;
 }
@@ -62,6 +66,7 @@ export function HomeScreen() {
   const [taskProgress, setTaskProgress] = useState(2);
   return (
     <main className="prototype-page" id="main-content">
+      <DemoNotice />
       <PageTitle title="Доброе утро, Анна!" subtitle="Ваш следующий шаг уже готов" />
       <div className="home-top-grid">
         <Panel className="today-panel">
@@ -97,6 +102,7 @@ export function CareerMapScreen() {
   const complete = evidence.filter(Boolean).length;
   return (
     <main className="prototype-page" id="main-content">
+      <DemoNotice />
       <PageTitle title="Моя карьерная карта" subtitle="Исследуйте возможности. Развивайте навыки. Создавайте своё будущее." />
       <div className="content-with-aside">
         <div className="content-stack">
@@ -127,6 +133,7 @@ export function QuestsScreen() {
   const filtered = useMemo(() => quests.filter((item) => (tab === "Все" || item.status === tab.slice(0, -1)) && item.title.toLowerCase().includes(query.toLowerCase())), [query, tab]);
   return (
     <main className="prototype-page" id="main-content">
+      <DemoNotice />
       <PageTitle goal={false} title="Квесты" subtitle="Превращайте развитие в измеримый прогресс" />
       <div className="stat-strip">{[["Активные","4","Вы выполняете сейчас"],["Доступные","12","Новые возможности"],["Завершённые","18","Ваши достижения"]].map(([label,value,desc]) => <Panel key={label}><IconTile>{value}</IconTile><span><strong>{label}</strong><small>{desc}</small></span><b>{value}</b></Panel>)}</div>
       <Panel className="quest-hero"><div className="quest-visual">▥</div><div className="quest-main-copy"><span className="status green">Главный квест</span><h2>Провести презентацию проекта</h2><p>Покажите результаты проекта команде и стейкхолдерам</p><div className="progress-with-label"><Progress value={60} /><b>60%</b></div><div className="reward-row"><span>Срок 24 окт. 2026</span><span>Средняя сложность</span><b>XP +120</b><span>Коммуникация +1</span></div></div><div className="evidence-list"><div><strong>Доказательства</strong><span>{evidence.filter(Boolean).length}/3</span></div>{["Черновик презентации","Провести презентацию","Получить обратную связь"].map((label,index) => <label key={label}><input checked={evidence[index]} onChange={() => setEvidence((items) => items.map((value,itemIndex) => itemIndex === index ? !value : value))} type="checkbox" /><span>{label}</span></label>)}<button className="button primary wide" type="button">Продолжить →</button></div></Panel>
@@ -142,6 +149,7 @@ export function SkillsScreen() {
   const skills = [["Аналитика",4,5],["Коммуникация",3,5],["Лидерство",2,5],["Управление проектами",3,5],["Стратегическое мышление",2,5]] as const;
   return (
     <main className="prototype-page" id="main-content">
+      <DemoNotice />
       <PageTitle title="Мои навыки" subtitle="Подтверждённые компетенции и зоны роста" />
       <div className="content-with-aside skills-layout">
         <div className="content-stack">
@@ -167,6 +175,7 @@ export function AiNavigatorScreen() {
   }
   return (
     <main className="prototype-page" id="main-content">
+      <DemoNotice />
       <PageTitle title="AI-навигатор" subtitle="Понимайте, зачем нужен каждый следующий шаг" />
       <div className="ai-layout">
         <Panel className="chat-panel">

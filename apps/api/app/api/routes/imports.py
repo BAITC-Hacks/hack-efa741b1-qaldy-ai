@@ -30,7 +30,9 @@ def validate_import(
 def apply_import(
     body: ImportApplyRequest,
     service: Service,
-    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    idempotency_key: Annotated[
+        str, Header(alias="Idempotency-Key", min_length=1, max_length=128)
+    ],
     _principal: HRPrincipal,
 ) -> ImportApplyResponse:
     try:

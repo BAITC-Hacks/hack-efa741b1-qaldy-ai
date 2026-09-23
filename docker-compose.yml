@@ -4,6 +4,10 @@ services:
       context: ./apps/api
     environment:
       APP_ENV: ${APP_ENV:-development}
+      AUTH_MODE: ${AUTH_MODE:-demo}
+      ALLOW_INSECURE_DEMO_AUTH: ${ALLOW_INSECURE_DEMO_AUTH:-false}
+      DEMO_HR_TOKEN: ${DEMO_HR_TOKEN:-}
+      DEMO_EMPLOYEE_TOKENS: ${DEMO_EMPLOYEE_TOKENS:-}
       AS_OF_DATE: ${AS_OF_DATE:-2026-10-01}
       LLM_ENABLED: ${LLM_ENABLED:-false}
       LLM_API_KEY: ${LLM_API_KEY:-}
@@ -12,6 +16,7 @@ services:
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-10}
       DATASET_DIR: /data/seed/career_quest_dataset
       DATABASE_URL: sqlite:////data/runtime/career_quest.db
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     volumes:
       - ./data/seed/career_quest_dataset:/data/seed/career_quest_dataset:ro
       - career_quest_runtime:/data/runtime
@@ -22,7 +27,7 @@ services:
         - CMD
         - python
         - -c
-        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz')
       interval: 5s
       timeout: 3s
       retries: 10

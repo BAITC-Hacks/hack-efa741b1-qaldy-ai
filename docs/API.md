@@ -22,8 +22,8 @@ Employee-токен привязан к одному ID и не может чи�
 | GET | `/readyz` | без токена | Проверка готовности датасета и SQLite |
 | GET | `/health` | без токена | Совместимый alias readiness-проверки |
 | GET | `/api/v1/auth/me` | Bearer | Проверка demo-токена и получение роли/ID |
-| GET | `/api/v1/employees?query=&limit=50` | HR | Поиск сотрудников, лимит 1–1000 |
-| GET | `/api/v1/employees/{employee_id}/journey` | Employee своего ID или HR | Профиль, прогресс, навыки и рекомендации |
+| GET | `/api/v1/employees?query=&limit=50` | HR | Поиск сотрудников, лимит 1–200 |
+| GET | `/api/v1/employees/{employee_id}/journey` | Employee своего ID или HR | Полный профиль, baseline/effective skills, история, прогресс и рекомендации |
 | POST | `/api/v1/employees/{employee_id}/recommendations` | Employee своего ID или HR | Пересчёт рекомендаций |
 | POST | `/api/v1/employees/{employee_id}/activities/{event_id}/complete` | Employee своего ID или HR | Завершение; обязателен `Idempotency-Key` |
 | GET | `/api/v1/hr/skill-gaps` | HR | Агрегаты дефицита навыков |
@@ -37,7 +37,9 @@ HR-запросы поддерживают фильтры `department`, `role`, 
 
 ## Импорт
 
-Validate принимает JSON вида `{"employees_json": <содержимое employees.json>, "activity_history_csv": "<CSV-текст>"}`; CSV можно опустить. Apply принимает `validation_token` и `package_hash` из результата validate, а также заголовок `Idempotency-Key`. Токен проверки действует 15 минут. Пакет применяется транзакционно; одинаковый повтор идемпотентен, конфликтующие строки отклоняются. Импортированные записи становятся частью расчётов и восстанавливаются из SQLite после перезапуска API.
+Validate принимает JSON вида `{"employees_json": <содержимое employees.json>, "activity_history_csv": "<CSV-текст>"}`; CSV можно опустить. Один пакет ограничен 10 000 сотрудников, 100 000 строк истории и 10 MB CSV-текста. Apply принимает `validation_token` и `package_hash` из результата validate, а также заголовок `Idempotency-Key` длиной до 128 символов. Токен проверки действует 15 минут; просроченные validation payload удаляются при следующих validate-операциях. Пакет применяется транзакционно; одинаковый повтор идемпотентен, конфликтующие строки отклоняются. Импорт увеличивает `dataset_revision`, поэтому процессы с общей БД пересобирают dataset bundle при следующем запросе.
+
+Ответы `/api/*` содержат `Cache-Control: no-store`. Completion replay возвращает сохранённый исходный response snapshot (с `idempotent_replay=true`), а не пересчитывает его из более нового состояния.
 
 ## Примеры запросов
 

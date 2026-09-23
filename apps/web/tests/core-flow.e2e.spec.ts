@@ -1,7 +1,17 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { completionFixture, employeeFixture, journeyFixture } from "../src/test/fixtures";
 
+async function useDemoIdentity(page: Page, role: "employee" | "hr") {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("career-quest-demo-token", "playwright-demo-token");
+  });
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({
+    json: { role, employee_id: role === "employee" ? employeeFixture.employee_id : null },
+  }));
+}
+
 test("employee opens recommendations, completes a step and sees recalculated progress", async ({ page }) => {
+  await useDemoIdentity(page, "employee");
   await page.route("**/api/v1/employees?**", (route) => route.fulfill({ json: [employeeFixture] }));
   await page.route("**/api/v1/employees/*/recommendations", (route) => route.fulfill({ json: journeyFixture }));
   await page.route("**/api/v1/employees/*/activities/*/complete", (route) => route.fulfill({ json: completionFixture }));
@@ -16,6 +26,7 @@ test("employee opens recommendations, completes a step and sees recalculated pro
 });
 
 test("static journey interface switches between ru, kk and en", async ({ page }) => {
+  await useDemoIdentity(page, "employee");
   await page.route("**/api/v1/employees?**", (route) => route.fulfill({ json: [employeeFixture] }));
   await page.route("**/api/v1/employees/*/recommendations", (route) => route.fulfill({ json: journeyFixture }));
   await page.goto("/journey");
@@ -29,6 +40,7 @@ test("static journey interface switches between ru, kk and en", async ({ page })
 });
 
 test("HR dashboard loads API metrics and changes module", async ({ page }) => {
+  await useDemoIdentity(page, "hr");
   await page.route("**/api/v1/hr/**", async (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1);
     await route.fulfill({ json: { items: [{ metric: id, employees_count: 12, critical_count: 3 }] } });
@@ -41,6 +53,7 @@ test("HR dashboard loads API metrics and changes module", async ({ page }) => {
 });
 
 test("import performs validate then apply", async ({ page }) => {
+  await useDemoIdentity(page, "hr");
   await page.route("**/api/v1/import/validate", (route) => route.fulfill({ json: { valid: true, validation_token: "dry-1", package_hash: "a".repeat(64), rows: 1 } }));
   await page.route("**/api/v1/import/apply", (route) => route.fulfill({ json: { applied: true, imported: 1 } }));
   await page.goto("/import");

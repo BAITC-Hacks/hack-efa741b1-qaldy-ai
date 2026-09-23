@@ -26,6 +26,9 @@ class Employee:
     career_goal: CareerGoal | None
     skills: dict[str, int]
     last_review_date: date
+    manager_id: str | None = None
+    hire_date: date | None = None
+    tenure_months: int | None = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +80,9 @@ class ActivityRecord:
     completion_pct: int
     assigned_by: str
     source: Literal["seed", "overlay"] = "seed"
+    due_date: date | None = None
+    score: float | None = None
+    feedback_rating: int | None = None
 
 
 @dataclass(frozen=True)
@@ -140,6 +146,28 @@ class ProgressMetric:
 
 
 @dataclass(frozen=True)
+class CurrentSkill:
+    skill_id: str
+    name: str
+    level: int
+
+
+@dataclass(frozen=True)
+class ActivitySummary:
+    record_id: str
+    event_id: str
+    title: str
+    activity_date: date
+    due_date: date | None
+    status: ActivityStatus
+    completion_pct: int
+    score: float | None
+    feedback_rating: int | None
+    assigned_by: str
+    source: Literal["seed", "overlay"]
+
+
+@dataclass(frozen=True)
 class EmployeeJourney:
     source: Literal["dataset"]
     dataset_version: str
@@ -149,9 +177,11 @@ class EmployeeJourney:
     target_grade: Grade
     target_reason: str
     progress: ProgressMetric
+    current_skills: tuple[CurrentSkill, ...]
     skill_gaps: tuple[SkillGap, ...]
     recommendations: tuple[Recommendation, ...]
     continuations: tuple[Continuation, ...]
+    activity_history: tuple[ActivitySummary, ...]
     recommendation_mode: Literal["deterministic", "ai"] = "deterministic"
     recommendation_notice: str | None = None
     primary_reason: str | None = None

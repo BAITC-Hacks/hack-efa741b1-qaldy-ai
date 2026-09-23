@@ -6,6 +6,10 @@ import styles from "./secondary-pages.module.css";
 
 type Tab = { id: string; label: string };
 
+function DemoNotice() {
+  return <p className="demo-notice" role="note"><strong>Демо-экран.</strong> Профиль, показатели и действия здесь приведены для примера. Актуальную траекторию смотрите в разделе «Личная траектория».</p>;
+}
+
 function PageHeading({ title, subtitle, side }: { title: string; subtitle: string; side?: ReactNode }) {
   return (
     <div className={styles.headingRow}>
@@ -129,6 +133,7 @@ export function LearningPage() {
 
   return (
     <main className={styles.page}>
+      <DemoNotice />
       <PageHeading title="Обучение" subtitle="Учитесь тому, что приближает к карьерной цели" side={<GoalCard />} />
       <Notice message={notice} />
       <div className={styles.learningLayout}>
@@ -247,6 +252,7 @@ export function OpportunitiesPage() {
 
   return (
     <main className={styles.page}>
+      <DemoNotice />
       <PageHeading title="Возможности" subtitle="Реальные шаги к следующей карьерной роли" side={<GoalCard compact />} />
       <Panel>
         <div className={styles.filters}>
@@ -339,6 +345,7 @@ export function TeamPage() {
 
   return (
     <main className={styles.page}>
+      <DemoNotice />
       <PageHeading title="Команда" subtitle="Развивайтесь вместе через реальные задачи" side={<div className={styles.banner}><span className={styles.iconTile}>TEAM</span><div><strong>Сильная команда делает больше</strong><small>Обменивайтесь опытом и помогайте друг другу</small></div></div>} />
       <Notice message={notice} />
       <div className={styles.teamGrid}>
@@ -451,6 +458,7 @@ export function LibraryPage() {
 
   return (
     <main className={styles.page}>
+      <DemoNotice />
       <PageHeading title="Библиотека" subtitle="Материалы для работы и карьерного развития" />
       <input className={`${styles.search} ${styles.librarySearch}`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти материал, навык или тему" aria-label="Поиск материалов" />
       <div className={styles.libraryToolbar}>
@@ -544,6 +552,7 @@ export function ProfilePage() {
 
   return (
     <main className={styles.page}>
+      <DemoNotice />
       <div className={styles.headingRow}>
         <div className={styles.heading}><h1>Профиль и достижения</h1><p>Ваш подтверждённый карьерный капитал</p></div>
         <div className={styles.profileMenuWrap} ref={menuRef}>

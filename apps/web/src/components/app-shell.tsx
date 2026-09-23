@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { type Locale, useI18n } from "@/lib/i18n";
+import { AUTH_CHANGE_EVENT, clearAuthToken, fetchAuthIdentity, getAuthToken, setAuthToken, verifyAuthToken, type AuthIdentity } from "@/lib/auth";
 
 const navigation = [
   { href: "/", label: "Главная", labelKey: "home", icon: "home" },
@@ -56,7 +57,53 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { locale, setLocale, t } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [identity, setIdentity] = useState<AuthIdentity | null>(null);
+  const [tokenInput, setTokenInput] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authVersion, setAuthVersion] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onAuthChange = () => setAuthVersion((version) => version + 1);
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!getAuthToken()) {
+      setIdentity(null);
+      return () => controller.abort();
+    }
+    fetchAuthIdentity(controller.signal)
+      .then(setIdentity)
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name !== "AbortError") {
+          setIdentity(null);
+          setAuthError(error.message);
+        }
+      });
+    return () => controller.abort();
+  }, [authVersion]);
+
+  async function signIn(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!tokenInput.trim()) return;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const verified = await verifyAuthToken(tokenInput);
+      setAuthToken(tokenInput);
+      setIdentity(verified);
+      setTokenInput("");
+      setProfileOpen(false);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Не удалось проверить токен");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -96,20 +143,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               <option value="ru">RU</option><option value="kk">KK</option><option value="en">EN</option>
             </select>
           </label>
-          <button aria-label="Уведомления: 3 новых" className="notification-button" type="button">
+          <button aria-label="Уведомления: 3 демонстрационных" className="notification-button" type="button">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg><b>3</b>
           </button>
           <span className="header-divider" />
           <button aria-expanded={profileOpen} aria-haspopup="menu" className="profile-trigger" onClick={() => setProfileOpen((value) => !value)} type="button">
-            <span className="avatar-photo">АС</span>
-            <span><strong>Анна Смирнова</strong><small>Аналитик</small></span>
+            <span className="avatar-photo">{identity?.role === "hr" ? "HR" : identity?.employee_id?.slice(0, 2).toUpperCase() ?? "ДЕ"}</span>
+            <span><strong>{identity?.role === "hr" ? "HR-доступ" : identity?.employee_id ?? "Демо-профиль"}</strong><small>{identity ? "Подключено к API" : "Войдите с демо-токеном"}</small></span>
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4" /></svg>
           </button>
           {profileOpen && (
             <div className="profile-menu" role="menu">
               <Link href="/profile" role="menuitem">Профиль и достижения</Link>
-              <button role="menuitem" type="button">Настройки</button>
-              <button role="menuitem" type="button">Выйти</button>
+              <form className="auth-menu-form" onSubmit={signIn}>
+                <label htmlFor="demo-auth-token">Демо-токен API</label>
+                <input id="demo-auth-token" className="auth-token-input" type="password" autoComplete="off" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} placeholder="Вставьте токен" />
+                <button disabled={authBusy || !tokenInput.trim()} type="submit">{authBusy ? "Проверка…" : "Подключиться"}</button>
+                {authError && <span className="auth-menu-error" role="alert">{authError}</span>}
+              </form>
+              {identity && <button role="menuitem" type="button" onClick={() => { clearAuthToken(); setIdentity(null); setProfileOpen(false); }}>Выйти</button>}
             </div>
           )}
         </div>
@@ -119,8 +171,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {drawerOpen && <button aria-label="Закрыть навигацию" className="drawer-backdrop" onClick={() => setDrawerOpen(false)} type="button" />}
         <aside className={`sidebar ${drawerOpen ? "is-open" : ""}`}>
           <div className="level-card">
+            <div className="sidebar-demo-label">Демо: уровень и XP приведены для примера</div>
             <div className="level-row-top">
-              <span className="sidebar-avatar">АС</span>
+              <span className="sidebar-avatar">{identity?.role === "hr" ? "HR" : identity?.employee_id?.slice(0, 2).toUpperCase() ?? "ДЕ"}</span>
               <div><strong>Уровень 7</strong><div className="xp-track"><i style={{ width: "77%" }} /></div><small>2 450 / 3 000 XP</small></div>
             </div>
             <div className="streak-row"><span className="flame-mark">◆</span><strong>Серия: 4 недели</strong><span>›</span></div>

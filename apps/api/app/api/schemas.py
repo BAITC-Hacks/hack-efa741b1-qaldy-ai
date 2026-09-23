@@ -14,9 +14,22 @@ class EmployeeListItemResponse(BaseModel):
     grade: str
 
 
+class CareerGoalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    target_role: str
+    target_grade: str
+
+
 class EmployeeResponse(EmployeeListItemResponse):
     work_format: str
     preferred_language: str
+    manager_id: str | None
+    hire_date: date | None
+    tenure_months: int | None
+    career_goal: CareerGoalResponse | None
+    skills: dict[str, int]
+    last_review_date: date
 
 
 class ProgressResponse(BaseModel):
@@ -36,6 +49,32 @@ class SkillGapResponse(BaseModel):
     required_level: int
     gap: int
     critical: bool
+
+
+class CurrentSkillResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    skill_id: str
+    name: str
+    level: int = Field(ge=0, le=5)
+
+
+class ActivitySummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    record_id: str
+    event_id: str
+    title: str
+    activity_date: date
+    due_date: date | None
+    status: Literal[
+        "completed", "in_progress", "dropped", "no_show", "declined", "overdue"
+    ]
+    completion_pct: int = Field(ge=0, le=100)
+    score: float | None = Field(default=None, ge=0, le=100)
+    feedback_rating: int | None = Field(default=None, ge=1, le=5)
+    assigned_by: str
+    source: Literal["seed", "overlay"]
 
 
 class FactorScoreResponse(BaseModel):
@@ -84,9 +123,11 @@ class EmployeeJourneyResponse(BaseModel):
     target_grade: str
     target_reason: str
     progress: ProgressResponse
+    current_skills: tuple[CurrentSkillResponse, ...]
     skill_gaps: tuple[SkillGapResponse, ...]
     recommendations: tuple[RecommendationResponse, ...]
     continuations: tuple[ContinuationResponse, ...]
+    activity_history: tuple[ActivitySummaryResponse, ...]
     recommendation_mode: Literal["deterministic", "ai"]
     recommendation_notice: str | None
     primary_reason: str | None

@@ -88,6 +88,7 @@ class SQLiteRepository:
                     event_id TEXT NOT NULL,
                     idempotency_key TEXT NOT NULL,
                     record_id TEXT NOT NULL REFERENCES overlay_completions(record_id),
+                    result_json TEXT,
                     created_at TEXT NOT NULL,
                     PRIMARY KEY (employee_id, event_id, idempotency_key)
                 );
@@ -127,8 +128,40 @@ class SQLiteRepository:
                     payload_json TEXT NOT NULL,
                     batch_id TEXT NOT NULL REFERENCES import_batches(batch_id)
                 );
+                CREATE TABLE IF NOT EXISTS runtime_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+                INSERT OR IGNORE INTO runtime_metadata (key, value)
+                    VALUES ('dataset_revision', '0');
                 """
             )
+            completion_columns = {
+                row["name"]
+                for row in connection.execute(
+                    "PRAGMA table_info(completion_idempotency)"
+                ).fetchall()
+            }
+            if "result_json" not in completion_columns:
+                connection.execute(
+                    "ALTER TABLE completion_idempotency ADD COLUMN result_json TEXT"
+                )
+
+    def ping(self) -> None:
+        """Raise when the configured database cannot serve a trivial query."""
+        with self.connection() as connection:
+            row = connection.execute("SELECT 1").fetchone()
+        if row is None or row[0] != 1:
+            raise RuntimeError("SQLite readiness query returned an unexpected result")
+
+    def dataset_revision(self) -> int:
+        with self.connection() as connection:
+            row = connection.execute(
+                "SELECT value FROM runtime_metadata WHERE key = 'dataset_revision'"
+            ).fetchone()
+        if row is None:
+            raise RuntimeError("Dataset revision metadata is missing")
+        return int(row["value"])
 
     @staticmethod
     def _utc_now() -> datetime:
@@ -173,6 +206,48 @@ class SQLiteRepository:
                 (employee_id, event_id, idempotency_key),
             ).fetchone()
         return None if row is None else self._activity_from_row(row)
+
+    def find_completion_snapshot(
+        self,
+        employee_id: str,
+        event_id: str,
+        idempotency_key: str,
+    ) -> dict[str, Any] | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                """SELECT result_json
+                   FROM completion_idempotency
+                   WHERE employee_id = ? AND event_id = ?
+                     AND idempotency_key = ?""",
+                (employee_id, event_id, idempotency_key),
+            ).fetchone()
+        if row is None or row["result_json"] is None:
+            return None
+        return json.loads(row["result_json"])
+
+    def save_completion_snapshot(
+        self,
+        employee_id: str,
+        event_id: str,
+        idempotency_key: str,
+        snapshot: dict[str, Any],
+    ) -> None:
+        encoded = json.dumps(
+            snapshot,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        with self.connection() as connection:
+            cursor = connection.execute(
+                """UPDATE completion_idempotency
+                   SET result_json = ?
+                   WHERE employee_id = ? AND event_id = ?
+                     AND idempotency_key = ?""",
+                (encoded, employee_id, event_id, idempotency_key),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Completion idempotency record is missing")
 
     def record_completion(
         self,
@@ -269,6 +344,10 @@ class SQLiteRepository:
     ) -> None:
         now = self._utc_now().isoformat()
         with self.connection() as connection:
+            connection.execute(
+                "DELETE FROM import_validations WHERE expires_at <= ?",
+                (now,),
+            )
             connection.execute(
                 """INSERT INTO import_validations
                    (token, package_hash, payload_json, preview_json, expires_at, created_at)
@@ -412,6 +491,11 @@ class SQLiteRepository:
                         batch_id,
                         applied_at.isoformat(),
                     ),
+                )
+                connection.execute(
+                    """UPDATE runtime_metadata
+                       SET value = CAST(value AS INTEGER) + 1
+                       WHERE key = 'dataset_revision'"""
                 )
                 connection.commit()
                 return StoredApplyResult(**result_data)

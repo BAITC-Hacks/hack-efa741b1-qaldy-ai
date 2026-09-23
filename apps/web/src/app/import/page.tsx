@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { fetchAuthIdentity, getAuthHeaders } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 type Result = Record<string, unknown>;
@@ -25,16 +26,21 @@ export default function ImportPage() {
     kk: { title: "Тексеру профильдерін импорттау", text: "Dry-run SQLite өзгермей тұрып файлды тексереді.", choose: "JSON немесе CSV таңдаңыз", validate: "Тексеру", apply: "Қолдану", valid: "Dry-run аяқталды", applied: "Импорт қолданылды", error: "Импорт қатесі" },
     en: { title: "Import evaluation profiles", text: "Dry-run validates the file before changing SQLite.", choose: "Choose JSON or CSV", validate: "Validate", apply: "Apply", valid: "Dry-run complete", applied: "Import applied", error: "Import error" },
   }[locale];
-  const headers = { "X-Demo-Role": "hr" };
+
+  async function requireHr() {
+    const identity = await fetchAuthIdentity();
+    if (identity.role !== "hr") throw new Error("Для импорта нужен доступ HR");
+  }
 
   async function validate() {
     if (!jsonFile) return;
     setBusy("validate"); setError(""); setApplied(null);
     try {
+      await requireHr();
       const parsed = JSON.parse(await jsonFile.text()) as Result;
       const payload = "employees_json" in parsed ? parsed : { employees_json: parsed };
       if (csvFile) payload.activity_history_csv = await csvFile.text();
-      const response = await fetch(`${API_URL}/api/v1/import/validate`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await fetch(`${API_URL}/api/v1/import/validate`, { method: "POST", headers: { ...getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       setValidation(await responseJson(response));
     } catch (reason) { setError(reason instanceof Error ? reason.message : labels.error); setValidation(null); }
     finally { setBusy(null); }
@@ -44,8 +50,9 @@ export default function ImportPage() {
     if (!jsonFile || !validation) return;
     setBusy("apply"); setError("");
     try {
+      await requireHr();
       const response = await fetch(`${API_URL}/api/v1/import/apply`, {
-        method: "POST", headers: { ...headers, "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+        method: "POST", headers: { ...getAuthHeaders(), "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({ validation_token: validation.validation_token, package_hash: validation.package_hash }),
       });
       setApplied(await responseJson(response));

@@ -6,6 +6,7 @@ from app.api.dependencies import get_journey_service
 from app.application.journey_service import JourneyService
 from app.domain.models import RoleProfile
 from app.infrastructure.dataset_loader import load_dataset
+from app.infrastructure.sqlite_repository import SQLiteRepository
 from app.main import app
 
 
@@ -31,6 +32,10 @@ def test_real_journey_is_explainable_and_deterministic() -> None:
     ]
     assert all(len(item.reasons) >= 3 for item in first.recommendations)
     assert all(abs(sum(item.weight for item in rec.factors) - 1.0) < 0.0001 for rec in first.recommendations)
+    assert first.current_skills
+    assert first.activity_history
+    assert first.employee.manager_id
+    assert first.employee.hire_date
 
 
 def test_same_role_promotion_accepts_events_for_target_grade() -> None:
@@ -67,18 +72,24 @@ def test_completion_updates_progress_once() -> None:
     assert replay.idempotent_replay is True
 
 
-def test_api_employee_journey_and_completion() -> None:
+def test_api_employee_journey_and_completion(monkeypatch) -> None:
     service, employee_id = service_with_recommendation()
+    monkeypatch.setenv("DEMO_EMPLOYEE_TOKENS", '{"' + employee_id + '":"test-employee-flow-secret"}')
     app.dependency_overrides[get_journey_service] = lambda: service
     client = TestClient(app)
-    headers = {"X-Demo-Role": "employee", "X-Employee-Id": employee_id}
+    headers = {"Authorization": "Bearer test-employee-flow-secret"}
     try:
         journey = client.get(
             f"/api/v1/employees/{employee_id}/journey",
             headers=headers,
         )
         assert journey.status_code == 200
+        assert journey.headers["cache-control"] == "no-store"
         body = journey.json()
+        assert body["employee"]["skills"]
+        assert body["employee"]["manager_id"]
+        assert body["current_skills"]
+        assert body["activity_history"]
         event_id = body["recommendations"][0]["event_id"]
 
         completion = client.post(
@@ -89,5 +100,49 @@ def test_api_employee_journey_and_completion() -> None:
         assert completion.status_code == 200
         assert completion.json()["journey"]["source"] == "dataset"
         assert completion.json()["changes"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_api_completion_replay_keeps_original_response_after_other_activity(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    service = JourneyService(
+        load_dataset(),
+        completion_repository=SQLiteRepository(tmp_path / "api-snapshot.db"),
+    )
+    employee_id = next(
+        employee_id
+        for employee_id in sorted(service.bundle.employees)
+        if len(service.get_journey(employee_id).recommendations) >= 2
+    )
+    monkeypatch.setenv("DEMO_EMPLOYEE_TOKENS", '{"' + employee_id + '":"test-employee-flow-secret"}')
+    headers = {"Authorization": "Bearer test-employee-flow-secret"}
+    first_event = service.get_journey(employee_id).recommendations[0].event_id
+    app.dependency_overrides[get_journey_service] = lambda: service
+    client = TestClient(app)
+    try:
+        first = client.post(
+            f"/api/v1/employees/{employee_id}/activities/{first_event}/complete",
+            headers={**headers, "Idempotency-Key": "api-original"},
+        )
+        assert first.status_code == 200
+
+        second_event = service.get_journey(employee_id).recommendations[0].event_id
+        second = client.post(
+            f"/api/v1/employees/{employee_id}/activities/{second_event}/complete",
+            headers={**headers, "Idempotency-Key": "api-intervening"},
+        )
+        assert second.status_code == 200
+
+        replay = client.post(
+            f"/api/v1/employees/{employee_id}/activities/{first_event}/complete",
+            headers={**headers, "Idempotency-Key": "api-original"},
+        )
+        assert replay.status_code == 200
+        expected = first.json()
+        expected["idempotent_replay"] = True
+        assert replay.json() == expected
     finally:
         app.dependency_overrides.clear()
