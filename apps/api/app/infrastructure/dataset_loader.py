@@ -30,6 +30,7 @@ WORK_FORMATS = {"office", "hybrid", "remote"}
 PREFERRED_LANGUAGES = {"kk", "ru", "en"}
 EVENT_FORMATS = {"online", "offline", "self_paced"}
 ASSIGNED_BY = {"self", "manager", "hr"}
+REPEATABLE_EVENT_IDS = frozenset({"EV_036"})
 ACTIVITY_HISTORY_HEADER = (
     "record_id",
     "employee_id",
@@ -388,6 +389,16 @@ def load_dataset(dataset_dir: Path | None = None) -> DatasetBundle:
         duration_hours = _number(item.get("duration_hours"), f"{context}.duration_hours")
         if duration_hours <= 0:
             raise DatasetError(f"{context}.duration_hours: must be greater than zero")
+        repeatable = event_id in REPEATABLE_EVENT_IDS
+        if "repeatable" in item:
+            declared_repeatable = _strict_bool(
+                item["repeatable"], f"{context}.repeatable"
+            )
+            if declared_repeatable != repeatable:
+                raise DatasetError(
+                    f"{context}.repeatable: conflicts with the dataset policy for "
+                    f"{event_id!r}"
+                )
         events[event_id] = DevelopmentEvent(
             event_id=event_id,
             title=_text(item.get("title"), f"{context}.title"),
@@ -397,7 +408,7 @@ def load_dataset(dataset_dir: Path | None = None) -> DatasetBundle:
             ),
             duration_hours=duration_hours,
             mandatory=_strict_bool(item.get("mandatory"), f"{context}.mandatory"),
-            repeatable=_strict_bool(item.get("repeatable", False), f"{context}.repeatable"),
+            repeatable=repeatable,
             target_roles=frozenset(target_roles),
             target_grades=frozenset(target_grades),
             develops_skills=tuple(develops_skills),

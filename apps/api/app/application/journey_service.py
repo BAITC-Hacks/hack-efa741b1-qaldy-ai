@@ -562,17 +562,10 @@ class JourneyService:
     ) -> str | None:
         if employee.role in event.target_roles and employee.grade in event.target_grades:
             return "current_role"
-        target_index = GRADE_ORDER.index(target_profile.grade)
-        current_index = GRADE_ORDER.index(employee.grade)
-
         if target_profile.role == employee.role:
-            if employee.role in event.target_roles and any(
-                current_index < GRADE_ORDER.index(grade) <= target_index
-                for grade in event.target_grades
-            ):
-                return "current_role"
             return None
 
+        target_index = GRADE_ORDER.index(target_profile.grade)
         if target_profile.role in event.target_roles and any(
             GRADE_ORDER.index(grade) <= target_index for grade in event.target_grades
         ):

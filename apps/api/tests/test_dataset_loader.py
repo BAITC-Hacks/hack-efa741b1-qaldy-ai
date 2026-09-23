@@ -52,8 +52,12 @@ def _mutate_first_history_row(
 
 
 def test_seed_dataset_contract() -> None:
+    raw_events = json.loads(
+        (repository_dataset_dir() / "events.json").read_text(encoding="utf-8")
+    )["events"]
     bundle = load_dataset()
 
+    assert all("repeatable" not in event for event in raw_events)
     assert bundle.dataset_version == "1.0"
     assert bundle.as_of_date.isoformat() == "2026-10-01"
     assert len(bundle.skills) == 60
@@ -153,6 +157,27 @@ def test_event_booleans_are_strict(
     _mutate_json(root, "events.json", corrupt_boolean)
 
     with pytest.raises(DatasetError, match=rf"{field}: expected a boolean"):
+        load_dataset(root)
+
+
+@pytest.mark.parametrize(
+    ("event_id", "declared"),
+    [("EV_036", False), ("EV_005", True)],
+)
+def test_rejects_repeatable_override_that_conflicts_with_dataset_policy(
+    tmp_path: Path,
+    event_id: str,
+    declared: bool,
+) -> None:
+    root = _copy_seed(tmp_path)
+
+    def add_conflicting_override(document: dict[str, Any]) -> None:
+        event = next(item for item in document["events"] if item["event_id"] == event_id)
+        event["repeatable"] = declared
+
+    _mutate_json(root, "events.json", add_conflicting_override)
+
+    with pytest.raises(DatasetError, match="conflicts with the dataset policy"):
         load_dataset(root)
 
 
