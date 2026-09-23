@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
+from app.api.auth import EmployeeResourcePrincipal, HRPrincipal
 from app.api.dependencies import get_journey_service
 from app.api.schemas import (
     CompletionResponse,
@@ -23,6 +24,7 @@ Service = Annotated[JourneyService, Depends(get_journey_service)]
 @router.get("", response_model=list[EmployeeListItemResponse])
 def list_employees(
     service: Service,
+    _principal: HRPrincipal,
     query: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[EmployeeListItemResponse]:
@@ -30,7 +32,11 @@ def list_employees(
 
 
 @router.get("/{employee_id}/journey", response_model=EmployeeJourneyResponse)
-def employee_journey(employee_id: str, service: Service) -> EmployeeJourneyResponse:
+def employee_journey(
+    employee_id: str,
+    service: Service,
+    _principal: EmployeeResourcePrincipal,
+) -> EmployeeJourneyResponse:
     try:
         return EmployeeJourneyResponse.model_validate(service.get_journey(employee_id))
     except EmployeeNotFound as error:
@@ -38,7 +44,11 @@ def employee_journey(employee_id: str, service: Service) -> EmployeeJourneyRespo
 
 
 @router.post("/{employee_id}/recommendations", response_model=EmployeeJourneyResponse)
-def recommendations(employee_id: str, service: Service) -> EmployeeJourneyResponse:
+def recommendations(
+    employee_id: str,
+    service: Service,
+    _principal: EmployeeResourcePrincipal,
+) -> EmployeeJourneyResponse:
     try:
         return EmployeeJourneyResponse.model_validate(
             service.get_recommendations(employee_id)
@@ -55,6 +65,7 @@ def complete_activity(
     employee_id: str,
     event_id: str,
     service: Service,
+    _principal: EmployeeResourcePrincipal,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
 ) -> CompletionResponse:
     try:

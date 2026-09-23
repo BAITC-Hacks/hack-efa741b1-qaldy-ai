@@ -48,15 +48,19 @@ def test_api_employee_journey_and_completion() -> None:
     service, employee_id = service_with_recommendation()
     app.dependency_overrides[get_journey_service] = lambda: service
     client = TestClient(app)
+    headers = {"X-Demo-Role": "employee", "X-Employee-Id": employee_id}
     try:
-        journey = client.get(f"/api/v1/employees/{employee_id}/journey")
+        journey = client.get(
+            f"/api/v1/employees/{employee_id}/journey",
+            headers=headers,
+        )
         assert journey.status_code == 200
         body = journey.json()
         event_id = body["recommendations"][0]["event_id"]
 
         completion = client.post(
             f"/api/v1/employees/{employee_id}/activities/{event_id}/complete",
-            headers={"Idempotency-Key": "api-flow-1"},
+            headers={**headers, "Idempotency-Key": "api-flow-1"},
         )
 
         assert completion.status_code == 200
