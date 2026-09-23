@@ -1,16 +1,48 @@
-import type { EmployeeJourney } from "./types";
+import type { CompletionResult, EmployeeJourney, EmployeeListItem } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export async function fetchEmployeeJourney(signal?: AbortSignal): Promise<EmployeeJourney> {
-  const response = await fetch(`${API_URL}/api/v1/demo/employee-journey`, {
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(body?.detail ?? `API вернул статус ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export async function fetchEmployees(signal?: AbortSignal): Promise<EmployeeListItem[]> {
+  const response = await fetch(`${API_URL}/api/v1/employees?limit=200`, {
     signal,
     headers: { Accept: "application/json" },
   });
+  return readJson<EmployeeListItem[]>(response);
+}
 
-  if (!response.ok) {
-    throw new Error(`API вернул статус ${response.status}`);
-  }
+export async function fetchEmployeeJourney(
+  employeeId: string,
+  signal?: AbortSignal,
+): Promise<EmployeeJourney> {
+  const response = await fetch(`${API_URL}/api/v1/employees/${employeeId}/journey`, {
+    signal,
+    headers: { Accept: "application/json" },
+  });
+  return readJson<EmployeeJourney>(response);
+}
 
-  return response.json() as Promise<EmployeeJourney>;
+export async function completeActivity(
+  employeeId: string,
+  eventId: string,
+  idempotencyKey: string,
+): Promise<CompletionResult> {
+  const response = await fetch(
+    `${API_URL}/api/v1/employees/${employeeId}/activities/${eventId}/complete`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+    },
+  );
+  return readJson<CompletionResult>(response);
 }

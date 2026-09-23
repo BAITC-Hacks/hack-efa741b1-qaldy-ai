@@ -27,11 +27,6 @@ test-results/
 *.sqlite3
 data/runtime/
 
-# Local seed files are supplied by the hackathon kit
-data/seed/career_quest_dataset/*.json
-data/seed/career_quest_dataset/*.csv
-data/seed/career_quest_dataset/*.md
-
 # IDE and OS
 .idea/
 .vscode/

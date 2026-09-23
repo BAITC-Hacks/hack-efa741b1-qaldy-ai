@@ -6,15 +6,20 @@ FastAPI-приложение с модульными слоями:
 app/
 ├── api/              HTTP routes
 ├── application/      use cases
-├── domain/           модели и будущие правила рекомендаций
-├── infrastructure/   будущие loaders, repositories и LLM adapter
+├── domain/           модели данных и результата рекомендаций
+├── infrastructure/   loader seed-датасета
 └── main.py
 ```
 
-Текущий vertical slice:
+Текущий core flow:
 
 - `GET /health`;
-- `GET /api/v1/demo/employee-journey`.
+- `GET /api/v1/employees`;
+- `GET /api/v1/employees/{employee_id}/journey`;
+- `POST /api/v1/employees/{employee_id}/recommendations`;
+- `POST /api/v1/employees/{employee_id}/activities/{event_id}/complete` с заголовком `Idempotency-Key`.
+
+По умолчанию API читает `data/seed/career_quest_dataset` из корня репозитория. Другой путь можно передать через `DATASET_DIR`. Завершения хранятся в in-memory overlay, поэтому после перезапуска процесса исходный seed снова становится единственным источником состояния.
 
 Локальный запуск:
 

@@ -21,7 +21,7 @@ flowchart LR
     Browser[Employee / HR browser] --> Web[Next.js web]
     Web --> API[FastAPI application]
     API --> Domain[Domain and recommendation engine]
-    API --> DB[(SQLite MVP / PostgreSQL-ready)]
+    API --> Overlay[(In-memory completion overlay)]
     API --> Importer[JSON and CSV importer]
     Domain --> LLM[Optional LLM adapter]
     Importer --> Seed[Hackathon dataset]
@@ -81,7 +81,7 @@ LLM не может добавлять кандидатов или обходи�
 
 ## Хранение данных
 
-Для MVP используется SQLite. Доступ к данным скрывается за repository interfaces, чтобы production-вариант мог перейти на PostgreSQL без изменения домена.
+Текущий core flow читает неизменяемый seed и накладывает завершения текущего процесса через in-memory overlay. Следующий этап переносит overlay в SQLite за repository interface; production-вариант сможет перейти на PostgreSQL без изменения домена.
 
 Основные сущности:
 
@@ -93,7 +93,7 @@ LLM не может добавлять кандидатов или обходи�
 - RecommendationRun и RecommendationItem;
 - ImportBatch и ImportError.
 
-Seed импортируется идемпотентно. Новые завершения и проверочные профили сохраняются отдельно; исходные файлы не перезаписываются.
+Seed загружается детерминированно. Новые завершения сохраняются отдельно; исходные файлы не перезаписываются.
 
 ## Безопасность
 
