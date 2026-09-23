@@ -22,16 +22,21 @@ cd hack-efa741b1-qaldy-ai
 Linux/macOS:
 
 ```bash
-cp .env.example .env
+sed '/^DEMO_HR_TOKEN=/d' .env.example > .env
+printf 'DEMO_HR_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .env
 ```
 
 Windows PowerShell:
 
 ```powershell
-Copy-Item .env.example .env
+.\scripts\setup-demo-auth.ps1
 ```
 
-По умолчанию `LLM_ENABLED=false`, поэтому внешний ключ для локального запуска не требуется. Для AI-режима задайте в локальном `.env` значения `LLM_ENABLED=true`, `LLM_API_KEY`, `LLM_BASE_URL` и `LLM_MODEL`. Не коммитьте `.env`: файл исключён через `.gitignore`.
+Скрипт создаёт случайный HR-токен в `.env` и показывает его один раз для входа в web-интерфейс. Если токен уже задан, он сохраняется без изменений. Для отдельного сотруднического входа добавьте в `.env` JSON-словарь `DEMO_EMPLOYEE_TOKENS`, где ключ — ID сотрудника, значение — его уникальный токен длиной от 16 символов. Роль и ID определяет только API по токену; клиент не может назначить их себе заголовками. HR-токен позволяет просматривать профили и импортировать данные.
+
+По умолчанию `LLM_ENABLED=false`, поэтому внешний ключ для локального запуска не требуется. Для AI-reranking задайте в локальном `.env` значения `LLM_ENABLED=true`, `LLM_API_KEY`, `LLM_BASE_URL` и `LLM_MODEL`. Не коммитьте `.env`: файл исключён через `.gitignore`.
+
+Demo-аутентификация использует `AUTH_MODE=demo` и `Authorization: Bearer <token>`. Для проверки токена доступен `GET /api/v1/auth/me`. В production/staging и Vercel она fail-closed по умолчанию; переменная `ALLOW_INSECURE_DEMO_AUTH=true` ослабляет это поведение только для временного закрытого демо и не заменяет production identity provider.
 
 ## Датасет
 
@@ -97,8 +102,8 @@ npm run dev
 
 ## Проверка пользовательского сценария
 
-1. Откройте `http://localhost:3000`.
-2. Выберите сотрудника из seed-датасета.
+1. Откройте `http://localhost:3000` и введите HR-токен из `.env`.
+2. Откройте `/journey` и выберите сотрудника из seed-датасета.
 3. Проверьте целевой профиль, разрывы и 1–3 рекомендации.
 4. Нажмите «Завершить активность» и проверьте блок `before → after` и обновлённый прогресс.
 
@@ -106,6 +111,6 @@ npm run dev
 
 ## Переменные окружения
 
-`API_PORT` и `WEB_PORT` меняют публикуемые порты Compose. `NEXT_PUBLIC_API_URL` задаёт адрес API, встраиваемый при сборке web image, поэтому после его изменения пересоберите web. `DATASET_DIR` задаёт путь к seed; при запуске в Compose каталог также должен быть смонтирован. `DATABASE_URL` задаёт SQLite-файл с завершениями и импортами. `CORS_ORIGINS` — дополнительные origins API через запятую. `LLM_ENABLED`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` и `LLM_TIMEOUT_SECONDS` включают необязательный reranker.
+`API_PORT` и `WEB_PORT` меняют публикуемые порты Compose. `NEXT_PUBLIC_API_URL` задаёт адрес API, встраиваемый при сборке web image, поэтому после его изменения пересоберите web. `DATASET_DIR` задаёт путь к seed; при запуске в Compose каталог также должен быть смонтирован. `DATABASE_URL` задаёт SQLite-файл с завершениями и импортами. `CORS_ORIGINS` — дополнительные origins API через запятую. `AUTH_MODE` выбирает auth adapter (сейчас поддержан только `demo`); `DEMO_HR_TOKEN` задаёт HR-токен, а `DEMO_EMPLOYEE_TOKENS` — JSON-словарь персональных токенов; `ALLOW_INSECURE_DEMO_AUTH` — явное временное исключение для закрытого публичного демо. `LLM_ENABLED`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` и `LLM_TIMEOUT_SECONDS` включают необязательный reranker.
 
 На Windows PowerShell для локального запуска API активируйте окружение как `.\.venv\Scripts\Activate.ps1`.

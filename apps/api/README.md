@@ -1,48 +1,38 @@
 # API application
 
-FastAPI-приложение с модульными слоями:
+FastAPI-приложение с разделением на HTTP-маршруты (`api`), use cases (`application`), доменные модели и расчёты (`domain`), а также loader, SQLite repository и LLM adapter (`infrastructure`).
 
-```text
-app/
-├── api/              HTTP routes
-├── application/      use cases
-├── domain/           модели данных и результата рекомендаций
-├── infrastructure/   loader seed-датасета
-└── main.py
-```
+## Основные маршруты
 
-Текущий core flow:
+- `GET /livez`, `GET /readyz`, `GET /health` — liveness/readiness.
+- `GET /api/v1/auth/me` — проверка Bearer demo-токена.
+- Employee journey, recommendations и completion — `/api/v1/employees/*`.
+- HR-аналитика — `/api/v1/hr/skill-gaps`, `/participation`, `/uncovered-employees`, `/catalog-gaps`.
+- Импорт — `POST /api/v1/import/validate` и `POST /api/v1/import/apply`.
 
-- `GET /health`;
-- `GET /api/v1/employees`;
-- `GET /api/v1/employees/{employee_id}/journey`;
-- `POST /api/v1/employees/{employee_id}/recommendations`;
-- `POST /api/v1/employees/{employee_id}/activities/{event_id}/complete` с заголовком `Idempotency-Key`.
-- HR analytics: `/api/v1/hr/skill-gaps`, `/participation`, `/uncovered-employees`, `/catalog-gaps`.
-- HR import: `POST /api/v1/import/validate` и `POST /api/v1/import/apply`.
+Полный контракт и примеры: [`../../docs/API.md`](../../docs/API.md).
 
-По умолчанию API читает `data/seed/career_quest_dataset` из корня репозитория. Другой путь можно передать через `DATASET_DIR`. Завершения и импортированные профили/история сохраняются в SQLite. Путь задаётся через `DATABASE_URL` (Compose по умолчанию использует `/data/runtime/career_quest.db`). Employee endpoints используют демонстрационные заголовки; список сотрудников, HR routes и импорт доступны только с `X-Demo-Role: hr`. Подробности — в [`../../docs/API.md`](../../docs/API.md).
+## Локальный запуск
 
-Локальный запуск:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn app.main:app --reload --port 8000
-```
-
-Windows PowerShell:
+Требуются Python 3.12+. API требует задать `DEMO_HR_TOKEN` и/или `DEMO_EMPLOYEE_TOKENS` (JSON-словарь `employee_id → token`); каждый token должен иметь не менее 16 символов. Получите demo-токены для локального запуска, не используйте реальные credentials. Пример ниже задаёт только формат:
 
 ```powershell
+$env:DEMO_HR_TOKEN = '<выданный HR token>'
+$env:DEMO_EMPLOYEE_TOKENS = '{"E0001":"<выданный employee token>"}'
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 uvicorn app.main:app --reload --port 8000
 ```
 
-Тесты:
+macOS/Linux: вместо `$env:...` используйте `export DEMO_HR_TOKEN=...` и `export DEMO_EMPLOYEE_TOKENS='{"E0001":"..."}'`. Не записывайте рабочие токены в Git.
+
+API читает seed из `data/seed/career_quest_dataset`; путь можно переопределить через `DATASET_DIR`. Завершения и импорт сохраняются в SQLite по `DATABASE_URL`. Для Docker Compose постоянная БД расположена на volume `career_quest_runtime`.
+
+## Тесты
+
+Из каталога `apps/api` после установки зависимостей:
 
 ```bash
-pytest
+python -m pytest
 ```
