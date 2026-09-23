@@ -34,3 +34,7 @@
 - LLM не участвует в eligibility или scoring;
 - исходный seed никогда не перезаписывается;
 - overlay процесса является временным и будет заменён SQLite persistence на следующем этапе.
+
+## AI-режим
+
+Если заданы `LLM_ENABLED=true`, `LLM_API_KEY` и `LLM_MODEL`, OpenAI-compatible adapter отправляет в Responses API только обезличенные evidence и top-N валидных кандидатов. Structured Output обязан вернуть те же `event_id` без дублей и по 3–4 доказуемые причины. Неизвестный ID, невалидная схема, отказ или timeout до 10 секунд приводят к детерминированному fallback. Ответ кэшируется по хэшу состояния, версии датасета и кандидатов.

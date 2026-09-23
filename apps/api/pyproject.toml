@@ -9,6 +9,7 @@ description = "Career Quest MVP API"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.141.1",
+    "openai>=2.0.0,<3.0.0",
     "uvicorn[standard]==0.53.0",
 ]
 

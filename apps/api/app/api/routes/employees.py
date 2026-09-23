@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -38,7 +39,12 @@ def employee_journey(employee_id: str, service: Service) -> EmployeeJourneyRespo
 
 @router.post("/{employee_id}/recommendations", response_model=EmployeeJourneyResponse)
 def recommendations(employee_id: str, service: Service) -> EmployeeJourneyResponse:
-    return employee_journey(employee_id, service)
+    try:
+        return EmployeeJourneyResponse.model_validate(
+            service.get_recommendations(employee_id)
+        )
+    except EmployeeNotFound as error:
+        raise HTTPException(status_code=404, detail="Employee not found") from error
 
 
 @router.post(
@@ -53,6 +59,10 @@ def complete_activity(
 ) -> CompletionResponse:
     try:
         result = service.complete_activity(employee_id, event_id, idempotency_key)
+        result = replace(
+            result,
+            journey=service.get_recommendations(employee_id),
+        )
         return CompletionResponse.model_validate(result)
     except EmployeeNotFound as error:
         raise HTTPException(status_code=404, detail="Employee not found") from error

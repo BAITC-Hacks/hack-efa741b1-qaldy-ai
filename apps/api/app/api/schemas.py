@@ -87,6 +87,8 @@ class EmployeeJourneyResponse(BaseModel):
     skill_gaps: tuple[SkillGapResponse, ...]
     recommendations: tuple[RecommendationResponse, ...]
     continuations: tuple[ContinuationResponse, ...]
+    recommendation_mode: Literal["deterministic", "ai"]
+    recommendation_notice: str | None
     primary_reason: str | None
     reason_counts: dict[str, int]
 

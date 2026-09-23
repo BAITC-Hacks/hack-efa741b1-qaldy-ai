@@ -151,6 +151,8 @@ class EmployeeJourney:
     skill_gaps: tuple[SkillGap, ...]
     recommendations: tuple[Recommendation, ...]
     continuations: tuple[Continuation, ...]
+    recommendation_mode: Literal["deterministic", "ai"] = "deterministic"
+    recommendation_notice: str | None = None
     primary_reason: str | None = None
     reason_counts: dict[str, int] = field(default_factory=dict)
 

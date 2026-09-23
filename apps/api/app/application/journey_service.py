@@ -1,9 +1,11 @@
 import math
+import logging
 import threading
 import uuid
 from collections import Counter
 from dataclasses import replace
 from datetime import date
+from typing import Protocol
 
 from app.domain.models import (
     ActivityRecord,
@@ -41,6 +43,11 @@ REASON_PRIORITY = (
     "no_gap",
     "audience_mismatch",
 )
+logger = logging.getLogger(__name__)
+
+
+class RecommendationReranker(Protocol):
+    def rerank(self, journey: EmployeeJourney) -> tuple[Recommendation, ...]: ...
 
 
 class JourneyError(RuntimeError):
@@ -60,8 +67,13 @@ class CompletionConflict(JourneyError):
 
 
 class JourneyService:
-    def __init__(self, bundle: DatasetBundle):
+    def __init__(
+        self,
+        bundle: DatasetBundle,
+        reranker: RecommendationReranker | None = None,
+    ):
         self.bundle = bundle
+        self._reranker = reranker
         self._overlay: list[ActivityRecord] = []
         self._idempotency: dict[tuple[str, str, str], CompletionResult] = {}
         self._lock = threading.RLock()
@@ -131,6 +143,40 @@ class JourneyService:
             continuations=continuations,
             primary_reason=primary_reason,
             reason_counts=dict(reason_counts),
+        )
+
+    def get_recommendations(self, employee_id: str) -> EmployeeJourney:
+        journey = self.get_journey(employee_id)
+        if not journey.recommendations:
+            return journey
+        if self._reranker is None:
+            return replace(
+                journey,
+                recommendation_notice=(
+                    "AI отключён: показан проверяемый детерминированный рейтинг."
+                ),
+            )
+        try:
+            recommendations = self._reranker.rerank(journey)
+        except Exception as error:  # LLM is never a single point of failure.
+            logger.warning(
+                "recommendation_fallback employee_id=%s error_type=%s",
+                employee_id,
+                type(error).__name__,
+            )
+            return replace(
+                journey,
+                recommendation_notice=(
+                    "AI временно недоступен: показан безопасный детерминированный рейтинг."
+                ),
+            )
+        return replace(
+            journey,
+            recommendations=recommendations,
+            recommendation_mode="ai",
+            recommendation_notice=(
+                "AI уточнил порядок и объяснения только среди валидных кандидатов."
+            ),
         )
 
     def complete_activity(

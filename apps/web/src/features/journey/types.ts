@@ -67,6 +67,8 @@ export type EmployeeJourney = {
   skill_gaps: SkillGap[];
   recommendations: Recommendation[];
   continuations: Continuation[];
+  recommendation_mode: "deterministic" | "ai";
+  recommendation_notice: string | null;
   primary_reason: string | null;
   reason_counts: Record<string, number>;
 };

@@ -150,6 +150,12 @@ export function EmployeeJourneyScreen() {
       </div>
 
       {error && <div className="inline-error">{error}</div>}
+      {journey.recommendation_notice && (
+        <div className={`ai-notice ${journey.recommendation_mode}`} aria-live="polite">
+          <strong>{journey.recommendation_mode === "ai" ? "AI подключён" : "Fallback-режим"}</strong>
+          <span>{journey.recommendation_notice}</span>
+        </div>
+      )}
       {changes.length > 0 && (
         <section className="success-panel" aria-live="polite">
           <strong>Прогресс обновлён</strong>
@@ -241,7 +247,9 @@ export function EmployeeJourneyScreen() {
       <section className="section-block">
         <div className="section-heading">
           <div>
-            <span className="section-kicker">Детерминированные рекомендации</span>
+            <span className="section-kicker">
+              {journey.recommendation_mode === "ai" ? "AI-рекомендации" : "Детерминированные рекомендации"}
+            </span>
             <h2>Следующие шаги</h2>
           </div>
           <p className="explainability-note">Score раскрывается до отдельных факторов</p>

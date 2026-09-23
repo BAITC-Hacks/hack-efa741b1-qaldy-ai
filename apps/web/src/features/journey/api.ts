@@ -22,7 +22,8 @@ export async function fetchEmployeeJourney(
   employeeId: string,
   signal?: AbortSignal,
 ): Promise<EmployeeJourney> {
-  const response = await fetch(`${API_URL}/api/v1/employees/${employeeId}/journey`, {
+  const response = await fetch(`${API_URL}/api/v1/employees/${employeeId}/recommendations`, {
+    method: "POST",
     signal,
     headers: { Accept: "application/json" },
   });

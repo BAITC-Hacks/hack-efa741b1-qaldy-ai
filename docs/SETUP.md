@@ -31,7 +31,7 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-По умолчанию `LLM_ENABLED=false`, поэтому внешний ключ для локального запуска не требуется. Для AI-режима будут использоваться `LLM_API_KEY`, `LLM_BASE_URL` и `LLM_MODEL`.
+По умолчанию `LLM_ENABLED=false`, поэтому внешний ключ для локального запуска не требуется. Для AI-режима задайте в локальном `.env` значения `LLM_ENABLED=true`, `LLM_API_KEY`, `LLM_BASE_URL` и `LLM_MODEL`. Не коммитьте `.env`: файл исключён через `.gitignore`.
 
 ## Датасет
 
