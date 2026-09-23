@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
-from app.api.auth import EmployeeResourcePrincipal, HRPrincipal
+from app.api.auth import EmployeeActionPrincipal, EmployeeResourcePrincipal, HRPrincipal
 from app.api.dependencies import get_journey_service
 from app.api.schemas import (
     CompletionResponse,
@@ -64,7 +64,7 @@ def complete_activity(
     employee_id: str,
     event_id: str,
     service: Service,
-    _principal: EmployeeResourcePrincipal,
+    _principal: EmployeeActionPrincipal,
     idempotency_key: Annotated[
         str, Header(alias="Idempotency-Key", min_length=1, max_length=128)
     ],

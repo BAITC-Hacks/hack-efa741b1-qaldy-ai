@@ -9,16 +9,7 @@ import { type Locale, useI18n } from "@/lib/i18n";
 import { AUTH_CHANGE_EVENT, clearAuthToken, fetchAuthIdentity, getAuthToken, setAuthToken, verifyAuthToken, type AuthIdentity } from "@/lib/auth";
 
 const navigation = [
-  { href: "/", label: "Главная", labelKey: "home", icon: "home" },
   { href: "/journey", label: "Личная траектория", labelKey: "journey", icon: "map" },
-  { href: "/career-map", label: "Моя карьерная карта", icon: "map" },
-  { href: "/quests", label: "Квесты", icon: "flag" },
-  { href: "/skills", label: "Навыки", icon: "chart" },
-  { href: "/learning", label: "Обучение", icon: "cap" },
-  { href: "/opportunities", label: "Возможности", icon: "case" },
-  { href: "/team", label: "Команда", icon: "team" },
-  { href: "/library", label: "Библиотека", icon: "book" },
-  { href: "/ai-navigator", label: "AI-навигатор", icon: "ai" },
   { href: "/hr", label: "HR-аналитика", labelKey: "hr", icon: "team" },
   { href: "/import", label: "Импорт", labelKey: "import", icon: "case" },
 ] as const;
@@ -154,7 +145,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           {profileOpen && (
             <div className="profile-menu" role="menu">
-              <Link href="/profile" role="menuitem">Профиль и достижения</Link>
+              <Link href="/journey" role="menuitem">Личная траектория</Link>
               <form className="auth-menu-form" onSubmit={signIn}>
                 <label htmlFor="demo-auth-token">Демо-токен API</label>
                 <input id="demo-auth-token" className="auth-token-input" type="password" autoComplete="off" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} placeholder="Вставьте токен" />
@@ -180,10 +171,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <nav aria-label="Основная навигация" className="sidebar-nav">
             {navigation.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link aria-current={active ? "page" : undefined} className={active ? "active" : ""} href={item.href} key={item.href}>
-                  <Glyph name={item.icon} /><span>{"labelKey" in item ? t(item.labelKey) : item.label}</span>
+                  <Glyph name={item.icon} /><span>{t(item.labelKey)}</span>
                 </Link>
               );
             })}

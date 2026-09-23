@@ -634,14 +634,14 @@ class JourneyService:
         primary_gap = gap_map[primary_skill_id]
         projected = effective.get(primary_skill_id, 0) + impacts[primary_skill_id]
         history_value = values["history_fit"]
-        if history_value >= 0.6:
-            history_reason = "История похожих активностей показывает хорошую завершаемость."
-        elif history_value <= 0.4:
+        if history_value > 0.5:
+            history_reason = "История похожих активностей повышает приоритет этого формата."
+        elif history_value < 0.5:
             history_reason = "История участия снижает приоритет, но не перекрывает карьерный разрыв."
         else:
             history_reason = "История участия учтена с нейтральным приоритетом."
         reasons = (
-            f"{primary_gap.name} — {'критичный ' if primary_gap.critical else ''}навык для {self._target_label(employee)}.",
+            f"Текущий грейд {employee.grade}. {primary_gap.name} — {'критичный ' if primary_gap.critical else ''}навык для {self._target_label(employee)}.",
             f"Ожидаемый эффект: {primary_gap.current_level} → {projected} при требовании {primary_gap.required_level}.",
             history_reason,
         )

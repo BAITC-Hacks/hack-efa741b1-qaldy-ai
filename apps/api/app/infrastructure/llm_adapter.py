@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from app.domain.models import EmployeeJourney, Recommendation
 
 logger = logging.getLogger(__name__)
-_PROMPT_VERSION = "recommendation-evidence-v3"
+_PROMPT_VERSION = "recommendation-evidence-v4"
 _MAX_SCORE_BAND = 5
 ReasonCode = Literal["career_goal", "skill_gap", "target_requirement", "history"]
 _REASON_CODES = frozenset({"career_goal", "skill_gap", "target_requirement", "history"})
@@ -130,7 +130,7 @@ class OpenAIRecommendationAdapter:
                         "content": (
                             "Ты карьерный AI-навигатор. Работай только с переданными "
                             "валидными кандидатами. Верни каждый event_id ровно один раз. "
-                            "Для каждого кандидата выбери 3 или 4 разных reason_codes из "
+                            "Для каждого кандидата верни все 4 разных reason_codes: "
                             "career_goal, skill_gap, target_requirement, history. "
                             "Коды задают порядок объяснения на основе проверенных данных; "
                             "не добавляй свободный текст, факты, навыки или мероприятия."
@@ -239,10 +239,9 @@ class OpenAIRecommendationAdapter:
 
         for _, reason_codes in plan:
             if (
-                len(reason_codes) < 3
-                or len(reason_codes) > len(_REASON_CODES)
+                len(reason_codes) != len(_REASON_CODES)
                 or len(set(reason_codes)) != len(reason_codes)
-                or not set(reason_codes).issubset(_REASON_CODES)
+                or set(reason_codes) != _REASON_CODES
             ):
                 raise ValueError("Model returned unsupported or insufficient evidence codes")
 

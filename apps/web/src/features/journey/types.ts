@@ -26,6 +26,26 @@ export type SkillGap = {
   critical: boolean;
 };
 
+export type CurrentSkill = {
+  skill_id: string;
+  name: string;
+  level: number;
+};
+
+export type ActivitySummary = {
+  record_id: string;
+  event_id: string;
+  title: string;
+  activity_date: string;
+  due_date: string | null;
+  status: "completed" | "in_progress" | "dropped" | "no_show" | "declined" | "overdue";
+  completion_pct: number;
+  score: number | null;
+  feedback_rating: number | null;
+  assigned_by: string;
+  source: "seed" | "overlay";
+};
+
 export type FactorScore = {
   code: string;
   label: string;
@@ -64,9 +84,11 @@ export type EmployeeJourney = {
   target_grade: string;
   target_reason: string;
   progress: Progress;
+  current_skills: CurrentSkill[];
   skill_gaps: SkillGap[];
   recommendations: Recommendation[];
   continuations: Continuation[];
+  activity_history: ActivitySummary[];
   recommendation_mode: "deterministic" | "ai";
   recommendation_notice: string | null;
   primary_reason: string | null;

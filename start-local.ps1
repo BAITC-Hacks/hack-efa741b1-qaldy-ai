@@ -17,6 +17,18 @@ function Test-LocalEndpoint([string]$Url) {
     catch { return $false }
 }
 
+if (Test-LocalEndpoint 'http://127.0.0.1:8000/health') {
+    try {
+        $runningSchema = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/openapi.json' -TimeoutSec 5
+        $hasCurrentAuth = $null -ne $runningSchema.paths.'/api/v1/auth/me'
+    } catch {
+        $hasCurrentAuth = $false
+    }
+    if (-not $hasCurrentAuth) {
+        throw 'Port 8000 is occupied by an incompatible API. Stop or move that service, then run start-local.ps1 again. No existing process was stopped.'
+    }
+}
+
 if (-not (Test-LocalEndpoint 'http://127.0.0.1:8000/health')) {
     & (Join-Path $repoRoot 'scripts/setup-demo-auth.ps1')
     $envContent = Get-Content -LiteralPath (Join-Path $repoRoot '.env')

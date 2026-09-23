@@ -104,6 +104,34 @@ def test_api_employee_journey_and_completion(monkeypatch) -> None:
         app.dependency_overrides.clear()
 
 
+def test_hr_journey_access_is_read_only(monkeypatch) -> None:
+    service, employee_id = service_with_recommendation()
+    event_id = service.get_journey(employee_id).recommendations[0].event_id
+    monkeypatch.setenv("DEMO_HR_TOKEN", "test-hr-read-only-secret")
+    monkeypatch.setenv("DEMO_EMPLOYEE_TOKENS", "{}")
+    app.dependency_overrides[get_journey_service] = lambda: service
+    client = TestClient(app)
+    headers = {
+        "Authorization": "Bearer test-hr-read-only-secret",
+        "Idempotency-Key": "hr-must-not-complete",
+    }
+    try:
+        journey = client.get(
+            f"/api/v1/employees/{employee_id}/journey",
+            headers=headers,
+        )
+        completion = client.post(
+            f"/api/v1/employees/{employee_id}/activities/{event_id}/complete",
+            headers=headers,
+        )
+
+        assert journey.status_code == 200
+        assert completion.status_code == 403
+        assert completion.json()["detail"] == "Employee role required for this action"
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_api_completion_replay_keeps_original_response_after_other_activity(
     tmp_path,
     monkeypatch,

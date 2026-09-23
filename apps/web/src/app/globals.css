@@ -426,3 +426,19 @@ a { color: inherit; text-decoration: none; }
 .import-result dt { color: var(--muted); }
 .import-result dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
 @media (max-width: 700px) { .import-files { grid-template-columns: 1fr; } }
+.current-skill-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.current-skill-card { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.current-skill-card > span { color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.current-skill-card > strong { font-size: 14px; }
+.current-skill-card > b { color: var(--green-strong); font-size: 12px; }
+.completed-activity-list { display: grid; gap: 9px; }
+.completed-activity-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.completed-activity-card strong, .completed-activity-card span { display: block; }
+.completed-activity-card > div:first-child span { margin-top: 5px; color: var(--muted); font-size: 11px; }
+.activity-results { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
+.activity-results b { color: var(--green-strong); font-size: 18px; }
+@media (max-width: 850px) { .current-skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .current-skill-grid { grid-template-columns: 1fr; }
+  .completed-activity-card, .activity-results { align-items: flex-start; flex-direction: column; }
+}

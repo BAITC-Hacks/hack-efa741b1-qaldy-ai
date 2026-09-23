@@ -18,6 +18,8 @@ test("employee opens recommendations, completes a step and sees recalculated pro
 
   await page.goto("/journey");
   await expect(page.getByRole("heading", { name: /Марат/ })).toBeVisible();
+  await expect(page.getByTestId("current-skills").getByText("SQL", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("completed-activities").getByText("Customer Discovery Lab")).toBeVisible();
   await expect(page.getByText("Сформировать стратегию продукта")).toBeVisible();
   await expect(page.getByText("72%", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Завершить" }).click();
@@ -41,6 +43,8 @@ test("static journey interface switches between ru, kk and en", async ({ page })
 
 test("HR dashboard loads API metrics and changes module", async ({ page }) => {
   await useDemoIdentity(page, "hr");
+  await page.route("**/api/v1/employees?**", (route) => route.fulfill({ json: [employeeFixture] }));
+  await page.route("**/api/v1/employees/*/recommendations", (route) => route.fulfill({ json: journeyFixture }));
   await page.route("**/api/v1/hr/**", async (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1);
     await route.fulfill({ json: { items: [{ metric: id, employees_count: 12, critical_count: 3 }] } });
@@ -50,6 +54,9 @@ test("HR dashboard loads API metrics and changes module", async ({ page }) => {
   await expect(page.getByRole("cell", { name: "12" })).toBeVisible();
   await page.getByRole("tab", { name: "Участие" }).click();
   await expect(page.getByRole("cell", { name: "participation" })).toBeVisible();
+  await page.goto("/journey");
+  await expect(page.getByText("Сформировать стратегию продукта")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Завершить" })).toHaveCount(0);
 });
 
 test("import performs validate then apply", async ({ page }) => {

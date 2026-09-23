@@ -127,5 +127,23 @@ def require_employee_access(
     return principal
 
 
+def require_employee_action_access(
+    employee_id: str,
+    principal: Annotated[DemoPrincipal, Depends(get_demo_principal)],
+) -> DemoPrincipal:
+    if principal.role != "employee":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Employee role required for this action",
+        )
+    if principal.employee_id != employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Employees can modify only their own resources",
+        )
+    return principal
+
+
 HRPrincipal = Annotated[DemoPrincipal, Depends(require_hr)]
 EmployeeResourcePrincipal = Annotated[DemoPrincipal, Depends(require_employee_access)]
+EmployeeActionPrincipal = Annotated[DemoPrincipal, Depends(require_employee_action_access)]

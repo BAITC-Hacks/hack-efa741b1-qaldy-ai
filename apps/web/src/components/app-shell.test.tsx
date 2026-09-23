@@ -4,22 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/lib/i18n";
 import { AppShell } from "./app-shell";
 
-const navigationState = vi.hoisted(() => ({ pathname: "/career-map" }));
+const navigationState = vi.hoisted(() => ({ pathname: "/hr" }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigationState.pathname,
 }));
 
 const requiredLinks = [
-  ["Главная", "/"],
-  ["Моя карьерная карта", "/career-map"],
-  ["Квесты", "/quests"],
-  ["Навыки", "/skills"],
-  ["Обучение", "/learning"],
-  ["Возможности", "/opportunities"],
-  ["Команда", "/team"],
-  ["Библиотека", "/library"],
-  ["AI-навигатор", "/ai-navigator"],
+  ["Личная траектория", "/journey"],
+  ["HR-аналитика", "/hr"],
+  ["Импорт", "/import"],
 ] as const;
 
 function renderShell() {
@@ -34,39 +28,40 @@ function renderShell() {
 
 describe("AppShell navigation", () => {
   beforeEach(() => {
-    navigationState.pathname = "/career-map";
+    navigationState.pathname = "/hr";
     window.sessionStorage.clear();
   });
 
-  it("exposes all product destinations and marks only the current one", () => {
+  it("exposes only the three live destinations and marks the current one", () => {
     renderShell();
     const navigation = screen.getByRole("navigation", { name: "Основная навигация" });
 
     for (const [name, href] of requiredLinks) {
       expect(within(navigation).getByRole("link", { name })).toHaveAttribute("href", href);
     }
-    expect(within(navigation).getByRole("link", { name: "Моя карьерная карта" })).toHaveAttribute(
+    expect(within(navigation).getAllByRole("link")).toHaveLength(3);
+    expect(within(navigation).getByRole("link", { name: "HR-аналитика" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(within(navigation).getByRole("link", { name: "Главная" })).not.toHaveAttribute(
+    expect(within(navigation).getByRole("link", { name: "Личная траектория" })).not.toHaveAttribute(
       "aria-current",
     );
   });
 
-  it("opens the profile destination from the user menu", async () => {
+  it("opens the live journey from the user menu", async () => {
     const user = userEvent.setup();
     renderShell();
 
     await user.click(screen.getByRole("button", { name: /Демо-профиль/ }));
 
-    expect(screen.getByRole("menuitem", { name: "Профиль и достижения" })).toHaveAttribute(
+    expect(screen.getByRole("menuitem", { name: "Личная траектория" })).toHaveAttribute(
       "href",
-      "/profile",
+      "/journey",
     );
   });
 
-  it("does not highlight Home while the profile page is open", () => {
+  it("does not highlight a live destination on an unrelated legacy route", () => {
     navigationState.pathname = "/profile";
     renderShell();
 

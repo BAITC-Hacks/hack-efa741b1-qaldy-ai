@@ -16,7 +16,9 @@ const messages = {
     complete: "Завершить", updating: "Обновляем…", progressUpdated: "Прогресс обновлён",
     retry: "Повторить", apiUnavailable: "API недоступен", loadingFailed: "Не удалось загрузить траекторию",
     deterministic: "Детерминированные рекомендации", ai: "AI-рекомендации", online: "Онлайн",
-    offline: "Офлайн", self_paced: "В своём темпе", target: "цель",
+    offline: "Офлайн", self_paced: "В своём темпе", target: "цель", currentSkills: "Текущие навыки",
+    skillLevel: "уровень", completedActivities: "Пройденные активности", completedOn: "Завершено",
+    score: "результат", feedback: "оценка", noCompleted: "Завершённых активностей пока нет.",
   },
   kk: {
     home: "Басты бет", hr: "HR-талдау", import: "Импорт", language: "Тіл",
@@ -29,7 +31,9 @@ const messages = {
     complete: "Аяқтау", updating: "Жаңартылуда…", progressUpdated: "Прогресс жаңартылды",
     retry: "Қайталау", apiUnavailable: "API қолжетімсіз", loadingFailed: "Траектория жүктелмеді",
     deterministic: "Детерминирленген ұсынымдар", ai: "AI ұсынымдары", online: "Онлайн",
-    offline: "Офлайн", self_paced: "Өз қарқынымен", target: "мақсат",
+    offline: "Офлайн", self_paced: "Өз қарқынымен", target: "мақсат", currentSkills: "Қазіргі дағдылар",
+    skillLevel: "деңгей", completedActivities: "Аяқталған белсенділіктер", completedOn: "Аяқталды",
+    score: "нәтиже", feedback: "баға", noCompleted: "Аяқталған белсенділік жоқ.",
   },
   en: {
     home: "Home", hr: "HR analytics", import: "Import", language: "Language",
@@ -42,7 +46,9 @@ const messages = {
     complete: "Complete", updating: "Updating…", progressUpdated: "Progress updated",
     retry: "Retry", apiUnavailable: "API unavailable", loadingFailed: "Could not load journey",
     deterministic: "Deterministic recommendations", ai: "AI recommendations", online: "Online",
-    offline: "Offline", self_paced: "Self-paced", target: "target",
+    offline: "Offline", self_paced: "Self-paced", target: "target", currentSkills: "Current skills",
+    skillLevel: "level", completedActivities: "Completed activities", completedOn: "Completed",
+    score: "score", feedback: "feedback", noCompleted: "No completed activities yet.",
   },
 } as const;
 

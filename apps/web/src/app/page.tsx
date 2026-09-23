@@ -1,5 +1,5 @@
-import { HomeScreen } from "@/features/prototype/core-pages";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <HomeScreen />;
+  redirect("/journey");
 }

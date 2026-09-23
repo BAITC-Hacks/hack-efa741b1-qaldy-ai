@@ -22,23 +22,23 @@ test.describe("маршруты Career Quest", () => {
   test("deep link, active navigation, reload и browser history согласованы", async ({
     page,
   }) => {
-    await page.goto("/career-map");
+    await page.goto("/journey");
 
     const activeLink = page.locator('a[aria-current="page"]');
-    await expect(activeLink).toHaveAttribute("href", "/career-map");
+    await expect(activeLink).toHaveAttribute("href", "/journey");
     await page.reload();
-    await expect(activeLink).toHaveAttribute("href", "/career-map");
+    await expect(activeLink).toHaveAttribute("href", "/journey");
 
-    await page.locator('a[href="/quests"]').first().click();
-    await expect(page).toHaveURL(/\/quests$/);
-    await expect(activeLink).toHaveAttribute("href", "/quests");
+    await page.locator('a[href="/hr"]').first().click();
+    await expect(page).toHaveURL(/\/hr$/);
+    await expect(activeLink).toHaveAttribute("href", "/hr");
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/career-map$/);
-    await expect(activeLink).toHaveAttribute("href", "/career-map");
+    await expect(page).toHaveURL(/\/journey$/);
+    await expect(activeLink).toHaveAttribute("href", "/journey");
 
     await page.goForward();
-    await expect(page).toHaveURL(/\/quests$/);
+    await expect(page).toHaveURL(/\/hr$/);
   });
 
   test("ключевые страницы не создают горизонтальный overflow на mobile", async ({
@@ -46,7 +46,7 @@ test.describe("маршруты Career Quest", () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
-    for (const path of ["/", "/career-map", "/ai-navigator"]) {
+    for (const path of ["/journey", "/hr", "/import"]) {
       await page.goto(path);
       const sizes = await page.evaluate(() => ({
         viewport: document.documentElement.clientWidth,

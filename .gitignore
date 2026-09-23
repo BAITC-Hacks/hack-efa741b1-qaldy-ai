@@ -19,10 +19,13 @@ venv/
 # Node.js
 node_modules/
 .next/
+.next*/
+.next-*/
 *.tsbuildinfo
 coverage/
 playwright-report/
 test-results/
+/artifacts/
 
 # Runtime data
 *.db

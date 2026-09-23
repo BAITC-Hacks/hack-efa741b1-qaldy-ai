@@ -66,6 +66,7 @@ export function EmployeeJourneyScreen() {
         if (controller.signal.aborted) return;
         setEmployees(items);
         setSelectedId(items[0]?.employee_id ?? "");
+        if (items.length === 0) setLoading(false);
       })
       .catch((requestError: unknown) => {
         if (requestError instanceof Error && requestError.name !== "AbortError") {
@@ -90,7 +91,7 @@ export function EmployeeJourneyScreen() {
           setError(requestError.message);
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [identity, selectedId]);
 
@@ -131,6 +132,14 @@ export function EmployeeJourneyScreen() {
     );
   }
 
+  if (!loading && identity?.role === "hr" && employees.length === 0) {
+    return (
+      <main className="page-content">
+        <section className="compact-empty">Профили сотрудников пока не загружены.</section>
+      </main>
+    );
+  }
+
   if (loading || !journey) {
     return (
       <main className="page-content" aria-busy="true">
@@ -146,6 +155,7 @@ export function EmployeeJourneyScreen() {
   }
 
   const { employee, progress } = journey;
+  const completedActivities = journey.activity_history.filter((item) => item.status === "completed");
 
   return (
     <main className="page-content">
@@ -217,6 +227,37 @@ export function EmployeeJourneyScreen() {
             {progress.current_points} из {progress.required_points} требуемых уровней навыков
           </small>
         </div>
+      </section>
+
+      <section className="section-block" data-testid="current-skills">
+        <div className="section-heading">
+          <div><span className="section-kicker">{t("currentRole")}</span><h2>{t("currentSkills")}</h2></div>
+          <span className="count-label">{journey.current_skills.length} {t("skills")}</span>
+        </div>
+        <div className="current-skill-grid">
+          {journey.current_skills.map((skill) => (
+            <article className="current-skill-card" key={skill.skill_id}>
+              <span>{skill.skill_id}</span><strong>{skill.name}</strong><b>{t("skillLevel")} {skill.level}/5</b>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section-block" data-testid="completed-activities">
+        <div className="section-heading">
+          <div><span className="section-kicker">{employee.full_name}</span><h2>{t("completedActivities")}</h2></div>
+          <span className="count-label">{completedActivities.length}</span>
+        </div>
+        {completedActivities.length ? (
+          <div className="completed-activity-list">
+            {completedActivities.map((activity) => (
+              <article className="completed-activity-card" key={activity.record_id}>
+                <div><strong>{activity.title}</strong><span>{activity.event_id} · {t("completedOn")} {activity.activity_date}</span></div>
+                <div className="activity-results"><b>{activity.completion_pct}%</b>{activity.score !== null && <span>{t("score")}: {activity.score}</span>}{activity.feedback_rating !== null && <span>{t("feedback")}: {activity.feedback_rating}/5</span>}</div>
+              </article>
+            ))}
+          </div>
+        ) : <div className="compact-empty">{t("noCompleted")}</div>}
       </section>
 
       {journey.continuations.length > 0 && (
@@ -306,13 +347,13 @@ export function EmployeeJourneyScreen() {
                 <div className="score-block">
                   <span>{t("relevance")}</span>
                   <strong>{recommendation.score}</strong>
-                  <button
-                    disabled={completing !== null || journey.employee.employee_id !== selectedId}
-                    onClick={() => handleComplete(recommendation.event_id)}
-                    type="button"
-                  >
-                    {completing === recommendation.event_id ? t("updating") : t("complete")}
-                  </button>
+                  {identity?.role === "employee" && <button
+                      disabled={completing !== null || journey.employee.employee_id !== selectedId}
+                      onClick={() => handleComplete(recommendation.event_id)}
+                      type="button"
+                    >
+                      {completing === recommendation.event_id ? t("updating") : t("complete")}
+                    </button>}
                 </div>
               </article>
             ))}

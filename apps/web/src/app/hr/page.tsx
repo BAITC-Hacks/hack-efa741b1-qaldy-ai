@@ -18,6 +18,7 @@ function rowsOf(value: unknown): Row[] {
   if (!value || typeof value !== "object") return [];
   const object = value as Row;
   for (const key of ["items", "results", "data", "rows"]) {
+    if (Array.isArray(object[key])) return rowsOf(object[key]);
     const rows = rowsOf(object[key]);
     if (rows.length) return rows;
   }

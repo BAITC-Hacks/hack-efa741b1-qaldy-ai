@@ -25,7 +25,7 @@ Employee-токен привязан к одному ID и не может чи�
 | GET | `/api/v1/employees?query=&limit=50` | HR | Поиск сотрудников, лимит 1–200 |
 | GET | `/api/v1/employees/{employee_id}/journey` | Employee своего ID или HR | Полный профиль, baseline/effective skills, история, прогресс и рекомендации |
 | POST | `/api/v1/employees/{employee_id}/recommendations` | Employee своего ID или HR | Пересчёт рекомендаций |
-| POST | `/api/v1/employees/{employee_id}/activities/{event_id}/complete` | Employee своего ID или HR | Завершение; обязателен `Idempotency-Key` |
+| POST | `/api/v1/employees/{employee_id}/activities/{event_id}/complete` | Только Employee своего ID | Завершение; обязателен `Idempotency-Key` |
 | GET | `/api/v1/hr/skill-gaps` | HR | Агрегаты дефицита навыков |
 | GET | `/api/v1/hr/participation` | HR | Участие в активностях |
 | GET | `/api/v1/hr/uncovered-employees` | HR | Сотрудники без подходящего шага |
@@ -50,9 +50,11 @@ curl -H "Authorization: Bearer $HR_TOKEN" \
   'http://localhost:8000/api/v1/employees?limit=10'
 curl -H "Authorization: Bearer $EMPLOYEE_TOKEN" \
   'http://localhost:8000/api/v1/employees/E0001/journey'
+# Скопируйте event_id добровольной доступной рекомендации из journey:
+EVENT_ID='<event_id из recommendations>'
 curl -X POST -H "Authorization: Bearer $EMPLOYEE_TOKEN" \
   -H 'Idempotency-Key: demo-001' \
-  'http://localhost:8000/api/v1/employees/E0001/activities/EV_001/complete'
+  "http://localhost:8000/api/v1/employees/E0001/activities/$EVENT_ID/complete"
 ```
 
 Подставляйте ID из активного набора данных. Для HR-проверки/применения передавайте заголовок `Authorization: Bearer $HR_TOKEN`:
