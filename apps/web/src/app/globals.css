@@ -372,6 +372,8 @@ a { color: inherit; text-decoration: none; }
   .progress-ring { width: 58px; height: 58px; }
   .progress-ring::before { width: 44px; height: 44px; }
   .featured-task { grid-template-columns: auto 1fr; }
+  .compact-route { padding-right: 46px; padding-left: 8px; }
+  .compact-route small { width: 76px; font-size: 9px; }
   .featured-task .button { grid-column: 1 / -1; width: 100%; }
   .mini-quest-grid, .quest-grid, .competency-grid { grid-template-columns: 1fr; }
   .skill-map { grid-template-columns: repeat(2, 1fr); }
