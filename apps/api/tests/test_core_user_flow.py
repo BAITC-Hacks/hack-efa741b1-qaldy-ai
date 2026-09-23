@@ -38,7 +38,7 @@ def test_real_journey_is_explainable_and_deterministic() -> None:
     assert first.employee.hire_date
 
 
-def test_same_role_promotion_accepts_events_for_target_grade() -> None:
+def test_same_role_promotion_marks_target_grade_event_as_current_role() -> None:
     bundle = load_dataset()
     employee = next(
         item for item in bundle.employees.values() if item.grade == "Junior"
@@ -55,7 +55,7 @@ def test_same_role_promotion_accepts_events_for_target_grade() -> None:
         critical_skills=frozenset(),
     )
 
-    assert JourneyService._candidate_kind(employee, target, event) == "bridge"
+    assert JourneyService._candidate_kind(employee, target, event) == "current_role"
 
 
 def test_completion_updates_progress_once() -> None:
